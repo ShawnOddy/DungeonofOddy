@@ -76,7 +76,7 @@
             width: 32px;
             height: 32px;
             cursor: grab;
-            background-image: url('spritesheet.jpg'); 
+            background-image: url('spritesheet.jpg'); /* STRICT LOWERCASE MATCH */
             background-size: 832px 704px; 
             image-rendering: pixelated;
         }
@@ -104,7 +104,6 @@
         <div style="position: relative; width: 800px; height: 576px;">
             <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
             
-            <!-- Dynamic Title Screen Overlay Layer -->
             <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
                 <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); font-family: 'Courier New', monospace;">DUNGEONS OF ODDY</h1>
                 <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Retro Norse Roguelike Sandbox Alpha</p>
@@ -122,7 +121,6 @@
             </div>
         </div>
         
-        <!-- Sidebar Interface Details -->
         <div class="panel">
             <div>
                 <div style="display: flex; gap: 8px; margin-bottom: 15px;">
@@ -162,7 +160,6 @@
         </div>
     </div>
 
-    <!-- Attribute Allocation Pop-up Modal -->
     <div id="level-up-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); z-index: 100; align-items: center; justify-content: center;">
         <div style="background: #1e293b; border: 3px solid #3b82f6; border-radius: 8px; padding: 25px; width: 340px; text-align: center; box-shadow: 0 20px 25px rgba(0,0,0,0.5);">
             <h2 style="color: #3b82f6; margin-top: 0; font-size:18px;">✨ LEVEL UP STIMULUS ✨</h2>
@@ -178,7 +175,6 @@
         </div>
     </div>
 
-    <!-- Carrying Pack Sack System Panel -->
     <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px;">
         <h3 style="margin:0; border:none; white-space: nowrap;">Inventory Carrying Sack:</h3>
         <div class="bag-grid" id="player-bag" style="flex-grow: 1; grid-template-columns: repeat(12, 1fr); min-height:56px;"></div>
@@ -225,18 +221,18 @@
         // --- IMAGES AND RENDERING ANCHORS ---
         const spriteSheet = new Image();
         spriteSheet.crossOrigin = "anonymous"; 
-        spriteSheet.src = 'spritesheet.jpg';   
+        spriteSheet.src = 'spritesheet.jpg'; // FIXED EXTENSION (LOWERCASE ONLY FOR GITHUB COMPLIANCE)
 
-        // Re-calibrated map tiles to align cleanly with your specific rows!
+        // Pixel-perfect sprite coordinate grid mapping from your exact image file
         const SPRITE_MAP = {
-            WALL:        { col: 3,  row: 3 }, // Solid brick stone wall (removes door frame edges)
+            WALL:        { col: 3,  row: 3 }, // Solid brick stone wall (removes door frame artifacts)
             FLOOR:       { col: 6,  row: 3 }, // Clean grey stone paving block
-            DOOR_CLOSED: { col: 6,  row: 2 }, // Dark arch doorway
-            PLAYER:      { col: 0,  row: 7 }, // Shifted down to capture the blue Knight
-            GOBLIN:      { col: 8,  row: 7 }, // Shifted down to capture the green Goblin
-            CHEST:       { col: 18, row: 0 }, // Gold-trimmed treasure container
-            STAIRS_DOWN: { col: 16, row: 2 }, // Archway leading down
-            STAIRS_UP:   { col: 15, row: 2 }  // Archway leading back up
+            DOOR_CLOSED: { col: 6,  row: 2 }, // Dark dungeon arch doorway
+            PLAYER:      { col: 0,  row: 7 }, // The blue Knight character row 
+            GOBLIN:      { col: 8,  row: 7 }, // The green classic Goblin monster row
+            CHEST:       { col: 18, row: 0 }, // Gold-banded treasure box
+            STAIRS_DOWN: { col: 16, row: 2 }, // Crypt steps leading down
+            STAIRS_UP:   { col: 15, row: 2 }  // Crypt steps leading back up
         };
 
         const canvas = document.getElementById('gameCanvas');
@@ -323,7 +319,11 @@
         function drawSprite(key, gridX, gridY) {
             const spr = SPRITE_MAP[key];
             if (!spr) return;
-            ctx.drawImage(spriteSheet, spr.col * TILE_SIZE, spr.row * TILE_SIZE, TILE_SIZE, TILE_SIZE, gridX * TILE_SIZE, gridY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            try {
+                ctx.drawImage(spriteSheet, spr.col * TILE_SIZE, spr.row * TILE_SIZE, TILE_SIZE, TILE_SIZE, gridX * TILE_SIZE, gridY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            } catch(e) {
+                console.error("Renderer stalled on sprite key: ", key, e);
+            }
         }
 
         // --- GAME SYSTEM INPUT ACTIONS ---
