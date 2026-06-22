@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dungeons of Oddy - Alpha Build</title>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+        #game-container {
+            display: flex;
+            gap: 20px;
+            background-color: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.5);
+        }
+        canvas {
+            border: 3px solid #475569;
+            background-color: #020617;
+            border-radius: 6px;
+            cursor: crosshair;
+        }
+        .panel {
+            width: 300px;
+            background-color: #0f172a;
+            border: 2px solid #475569;
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        h3, h4 { margin-top: 0; border-bottom: 2px solid #334155; padding-bottom: 5px; color: #94a3b8;}
+        .stat-line { margin-bottom: 6px; font-size: 13px; }
+        
+        /* Drag and Drop Inventory Layout */
+        .equipment-slots {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .bag-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background-color: #1e293b;
+            padding: 8px;
+            border-radius: 6px;
+            min-height: 140px;
+        }
+        .slot {
+            background-color: #334155;
+            border: 2px dashed #475569;
+            border-radius: 4px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .slot.drag-over { border-color: #3b82f6; background-color: #1e3a8a; }
+        .slot-label { position: absolute; bottom: 2px; color: #64748b; font-size: 8px; text-transform: uppercase; }
+        
+        .item-sprite {
+            width: 32px;
+            height: 32px;
+            cursor: grab;
+            background-image: url('spritesheet.png'); /* Reads your local asset */
+            background-size: 832px 704px; 
+            image-rendering: pixelated;
+        }
+        .item-sprite:active { cursor: grabbing; }
+
+        .log {
+            font-size: 12px;
+            color: #cbd5e1;
+            height: 100px;
+            overflow-y: auto;
+            border-top: 1px solid #334155;
+            padding-top: 8px;
+            margin-top: 10px;
+        }
+        button {
+            color: white; border: none; border-radius: 4px; padding: 6px 12px;
+            font-weight: bold; font-size: 11px; cursor: pointer; transition: background 0.2s;
+        }
+        button:hover { filter: brightness(1.2); }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Unified Viewport Stack Frame -->
+        <div style="position: relative; width: 800px; height: 576px;">
+            <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
+            
+            <!-- Dynamic Title Screen Overlay Layer -->
+            <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
+                <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); font-family: 'Courier New', monospace;">DUNGEONS OF ODDY</h1>
+                <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Retro Norse Roguelike Sandbox Alpha</p>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px; width: 260px;">
+                    <button onclick="startNewGame()" style="background-color: #3b82f6; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px;">🛡️ Start New Adventure</button>
+                    <button id="title-load-btn" onclick="loadGameFromTitle()" style="background-color: #6366f1; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px; display: none;">📂 Restore Last Save</button>
+                </div>
+                
+                <div style="margin-top: 50px; font-size: 11px; color: #475569; text-align: center; line-height: 1.6;">
+                    Controls: Move with WASD / Arrows<br>
+                    Press Enter on Descending Stairs to crawl down deeper.<br>
+                    Drag and Drop equipment onto your gear slots.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Interface Details -->
+        <div class="panel">
+            <div>
+                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                    <button onclick="saveGame()" style="background-color: #10b981; flex: 1;">Save Game</button>
+                    <button onclick="loadGame()" style="background-color: #6366f1; flex: 1;">Load Game</button>
+                </div>
+
+                <h3>Hero Snapshot</h3>
+                <div class="stat-line">Floor: <span id="floor-display" style="color: #3b82f6; font-weight:bold;">1</span></div>
+                <div class="stat-line">Level: <span id="lvl-display">1</span> (<span id="xp-display">0</span> / <span id="xpneeded-display">100</span> XP)</div>
+                <div class="stat-line">HP: <span id="hp-display" style="color: #ef4444; font-weight:bold;">20 / 20</span></div>
+                <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6; font-weight:bold;">30 / 30</span></div>
+                <div class="stat-line">Turns Ticked: <span id="turn-display">0</span></div>
+                
+                <div id="stat-sheet" style="font-size: 11px; line-height: 1.4; background:#1e293b; padding:6px; border-radius:4px; margin: 10px 0;">
+                    STR: <span id="stat-str">10</span> | INT: <span id="stat-int">10</span> | CON: <span id="stat-con">10</span><br>
+                    ATK Pow: <span id="stat-atk" style="color: #f59e0b;">10</span> | DEF Rating: <span id="stat-def" style="color: #10b981;">0</span>
+                </div>
+
+                <h4>Equipment Loadout</h4>
+                <div class="equipment-slots">
+                    <div class="slot" id="slot-main_hand" data-slot-type="main_hand" ondragover="allowDrop(event)" ondragleave="clearDragState(event)" ondrop="handleDrop(event)"><span class="slot-label">Weapon</span></div>
+                    <div class="slot" id="slot-torso" data-slot-type="torso" ondragover="allowDrop(event)" ondragleave="clearDragState(event)" ondrop="handleDrop(event)"><span class="slot-label">Armor</span></div>
+                </div>
+
+                <h4>Spellbook Action Keys</h4>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <button onclick="activateSpellAiming('magic_arrow')" style="background-color: #1e3a8a; text-align: left;">✨ Magic Arrow (3 MP)</button>
+                    <button onclick="activateSpellAiming('fireball')" style="background-color: #7c2d12; text-align: left;">💥 Fireball (8 MP)</button>
+                    <div id="aim-mode-indicator" style="font-size: 10px; color: #a8a29e; margin-top: 3px; text-align: center; display: none; font-weight:bold;">[AIMING MODE]: Click target tile on Canvas</div>
+                </div>
+            </div>
+
+            <div>
+                <div id="log-box" class="log">⚡ Welcome, Hero, to the Dungeons of Oddy... ⚡</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attribute Allocation Pop-up Modal -->
+    <div id="level-up-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); z-index: 100; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; border: 3px solid #3b82f6; border-radius: 8px; padding: 25px; width: 340px; text-align: center; box-shadow: 0 20px 25px rgba(0,0,0,0.5);">
+            <h2 style="color: #3b82f6; margin-top: 0; font-size:18px;">✨ LEVEL UP STIMULUS ✨</h2>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">Select an attribute to naturally improve your hero's sheet:</p>
+            <div style="display: flex; flex-direction: column; gap: 8px; text-align: left;">
+                <button onclick="allocateStatPoint('str')" style="background: #334155; padding: 8px; text-align: left;">💪 STR: Melee Damage & Carry Capacity</button>
+                <button onclick="allocateStatPoint('int')" style="background: #334155; padding: 8px; text-align: left;">🧠 INT: Spell Damage & Pool Max MP</button>
+                <button onclick="allocateStatPoint('con')" style="background: #334155; padding: 8px; text-align: left;">🛡️ CON: Max Vitality HP & Defense Rating</button>
+                <button onclick="allocateStatPoint('dex')" style="background: #334155; padding: 8px; text-align: left;">🎯 DEX: Accuracy & Crit Modifiers</button>
+                <button onclick="allocateStatPoint('wis')" style="background: #334155; padding: 8px; text-align: left;">🌱 WIS: HP & MP Regeneration Per Turn</button>
+                <button onclick="allocateStatPoint('cha')" style="background: #334155; padding: 8px; text-align: left;">🤝 CHA: Merchant Trading Prices</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carrying Pack Sack System Panel -->
+    <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px;">
+        <h3 style="margin:0; border:none; white-space: nowrap;">Inventory Carrying Sack:</h3>
+        <div class="bag-grid" id="player-bag" style="flex-grow: 1; grid-template-columns: repeat(12, 1fr); min-height:56px;"></div>
+    </div>
+
+    <script>
+        // --- DATA DICTIONARIES & CORE ENGINE CONFIG ---
+        const TILE_SIZE = 32;
+        const MAP_WIDTH = 25;
+        const MAP_HEIGHT = 18;
+        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v1";
+
+        const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5 };
+
+        const ITEMS_DATABASE = {
+            "broadsword_01": { id: "broadsword_01", name: "Iron Broadsword", slotType: "main_hand", atk: 12, def: 0, bgX: 0, bgY: 15 },
+            "chainmail_01":  { id: "chainmail_01",  name: "Chain Mail",     slotType: "torso",     atk: 0,  def: 6, bgX: 3, bgY: 17 },
+            "potion_heal":   { id: "potion_heal",   name: "Healing Potion", slotType: "any",       atk: 0,  def: 0, bgX: 7, bgY: 15 }
+        };
+
+        const SPELL_BOOK = {
+            "magic_arrow": { name: "Magic Arrow", mpCost: 3, damage: 6, aoe: 0, range: 6 },
+            "fireball":    { name: "Fireball",    mpCost: 8, damage: 12, aoe: 1, range: 5 }
+        };
+
+        // --- MASTER STATE RUNTIME ---
+        let gameState = 'TITLE';
+        let dungeonLevel = 1;
+        let turnCount = 0;
+        let gameMap = [];
+        let activeChests = {};
+        let activeSelectedSpell = null;
+        let mouseHoverGridX = 0, mouseHoverGridY = 0;
+
+        let player = {
+            x: 3, y: 3, hp: 20, maxHp: 20, mp: 30, maxMp: 30, level: 1, xp: 0, xpNeeded: 100,
+            stats: { str: 10, int: 10, con: 10, dex: 10, wis: 10, cha: 10 }
+        };
+
+        let enemy = { x: 0, y: 0, hp: 14, maxHp: 14, xpValue: 50, active: true };
+        let inventoryState = { bag: ["broadsword_01", "potion_heal"] };
+
+        // --- IMAGES AND RENDERING ANCHORS ---
+        const spriteSheet = new Image();
+        spriteSheet.src = 'spritesheet.png';
+
+        const SPRITE_MAP = {
+            WALL:        { col: 1,  row: 2 },
+            FLOOR:       { col: 3,  row: 2 },
+            DOOR_CLOSED: { col: 11, row: 0 },
+            PLAYER:      { col: 0,  row: 6 },
+            GOBLIN:      { col: 8,  row: 6 },
+            CHEST:       { col: 13, row: 0 },
+            STAIRS_DOWN: { col: 16, row: 2 },
+            STAIRS_UP:   { col: 15, row: 2 }
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- GAME ENTRY STATE MACHINES ---
+        function showTitleScreen() {
+            gameState = 'TITLE';
+            document.getElementById('title-screen-overlay').style.display = 'flex';
+            document.getElementById('title-load-btn').style.display = localStorage.getItem(SAVE_SLOT_KEY) ? 'block' : 'none';
+        }
+
+        function startNewGame() {
+            gameState = 'PLAYING';
+            document.getElementById('title-screen-overlay').style.display = 'none';
+            dungeonLevel = 1;
+            turnCount = 0;
+            player.hp = player.maxHp;
+            player.mp = player.maxMp;
+            inventoryState.bag = ["broadsword_01", "potion_heal"];
+            generateProceduralFloor();
+            initInventoryUI();
+            drawScene();
+            logMessage("⚔️ A fresh quest begins! Keep your blade sharp.");
+        }
+
+        function loadGameFromTitle() {
+            loadGame();
+            gameState = 'PLAYING';
+            document.getElementById('title-screen-overlay').style.display = 'none';
+        }
+
+        // --- MAP GENERATION PIPELINE ---
+        function generateProceduralFloor() {
+            gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
+            carveRoom(2, 2, 7, 5);
+            carveRoom(13, 4, 9, 8);
+            
+            for(let x = 8; x <= 13; x++) gameMap[4][x] = TILE.FLOOR;
+            gameMap[4][9] = TILE.DOOR_CLOSED;
+
+            gameMap[3][3] = TILE.STAIRS_UP;
+            gameMap[7][16] = TILE.STAIRS_DOWN;
+            
+            player.x = 3; player.y = 3;
+
+            gameMap[5][4] = TILE.CHEST;
+            activeChests["4,5"] = { itemId: "chainmail_01", opened: false };
+
+            enemy.x = 15; enemy.y = 6; enemy.hp = 10 + (dungeonLevel * 4); enemy.active = true;
+        }
+
+        function carveRoom(rx, ry, w, h) {
+            for(let y = ry; y < ry+h; y++) {
+                for(let x = rx; x < rx+w; x++) {
+                    gameMap[y][x] = TILE.FLOOR;
+                }
+            }
+        }
+
+        // --- GRAPHICS DRAW SEQUENCE ---
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    let tileType = gameMap[y][x];
+                    let key = 'WALL';
+                    if (tileType === TILE.FLOOR) key = 'FLOOR';
+                    if (tileType === TILE.DOOR_CLOSED) key = 'DOOR_CLOSED';
+                    if (tileType === TILE.CHEST) key = 'CHEST';
+                    if (tileType === TILE.STAIRS_DOWN) key = 'STAIRS_DOWN';
+                    if (tileType === TILE.STAIRS_UP) key = 'STAIRS_UP';
+                    drawSprite(key, x, y);
+                }
+            }
+
+            if (enemy.active) drawSprite('GOBLIN', enemy.x, enemy.y);
+            drawSprite('PLAYER', player.x, player.y);
+            if (activeSelectedSpell) drawSpellPreview();
+            updateUIDisplays();
+        }
+
+        function drawSprite(key, gridX, gridY) {
+            const spr = SPRITE_MAP[key];
+            if (!spr) return;
+            ctx.drawImage(spriteSheet, spr.col * TILE_SIZE, spr.row * TILE_SIZE, TILE_SIZE, TILE_SIZE, gridX * TILE_SIZE, gridY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+
+        // --- GAME SYSTEM INPUT ACTIONS ---
+        function processMove(dx, dy) {
+            let targetX = player.x + dx;
+            let targetY = player.y + dy;
+            let targetTile = gameMap[targetY][targetX];
+
+            if (targetTile === TILE.WALL) return;
+
+            if (targetTile === TILE.DOOR_CLOSED) {
+                gameMap[targetY][targetX] = TILE.FLOOR;
+                logMessage("🔓 Opened a closed door.");
+                endPlayerTurn();
+                return;
+            }
+
+            if (targetTile === TILE.CHEST) {
+                let chestKey = `${targetX},${targetY}`;
+                if (activeChests[chestKey]) {
+                    let itemFound = activeChests[chestKey].itemId;
+                    logMessage(`✨ Found item: **${ITEMS_DATABASE[itemFound].name}** inside a chest!`);
+                    inventoryState.bag.push(itemFound);
+                    initInventoryUI();
+                    gameMap[targetY][targetX] = TILE.FLOOR;
+                    delete activeChests[chestKey];
+                }
+                player.x = targetX; player.y = targetY;
+                endPlayerTurn();
+                return;
+            }
+
+            if (enemy.active && targetX === enemy.x && targetY === enemy.y) {
+                let dmg = Math.floor(Math.random() * 4) + 1 + Math.floor(player.stats.str / 5);
+                enemy.hp -= dmg;
+                logMessage(`⚔️ You strike the Goblin for ${dmg} melee dmg!`);
+                if (enemy.hp <= 0) {
+                    enemy.active = false;
+                    logMessage("💀 The Goblin crumbles into dust!");
+                    gainExperience(55);
+                }
+                endPlayerTurn();
+                return;
+            }
+
+            player.x = targetX; player.y = targetY;
+            endPlayerTurn();
+        }
+
+        function endPlayerTurn() {
+            turnCount++;
+            if (turnCount % 10 === 0) {
+                let regen = 1 + Math.floor(player.stats.wis / 5);
+                player.hp = Math.min(player.maxHp, player.hp + regen);
+                player.mp = Math.min(player.maxMp, player.mp + regen);
+            }
+
+            if (enemy.active) {
+                let edx = Math.sign(player.x - enemy.x);
+                let edy = Math.sign(player.y - enemy.y);
+                if (enemy.x + edx === player.x && enemy.y + edy === player.y) {
+                    let eDmg = Math.max(1, (Math.floor(Math.random() * 4) + 1) - Math.floor(player.stats.con / 5));
+                    player.hp -= eDmg;
+                    logMessage(`💥 Goblin hits you for ${eDmg} damage!`);
+                } else if (gameMap[enemy.y + edy][enemy.x + edx] !== TILE.WALL) {
+                    enemy.x += edx; enemy.y += edy;
+                }
+            }
+            drawScene();
+        }
+
+        // --- MAGICAL SPELLCASTING HOVER SYSTEM ---
+        function castSpell(spellId, targetX, targetY) {
+            const spell = SPELL_BOOK[spellId];
+            if (player.mp < spell.mpCost) { logMessage("⚠️ Out of Mana!"); return; }
+            player.mp -= spell.mpCost;
+
+            logMessage(`🔮 Directed ${spell.name} across the room...`);
+            if (spell.aoe === 0) {
+                if (enemy.active && targetX === enemy.x && targetY === enemy.y) {
+                    enemy.hp -= spell.damage;
+                    logMessage(`Direct hit! Spell dealt ${spell.damage} magic damage.`);
+                }
+            } else {
+                logMessage("💥 The element bursts outwards in an explosion!");
+                if (enemy.active && Math.max(Math.abs(enemy.x - targetX), Math.abs(enemy.y - targetY)) <= spell.aoe) {
+                    enemy.hp -= spell.damage;
+                    logMessage(`Splash explosion scorched the Goblin for ${spell.damage} dmg.`);
+                }
+            }
+            if (enemy.active && enemy.hp <= 0) { enemy.active = false; gainExperience(55); }
+            endPlayerTurn();
+        }
+
+        function getLinePath(x0, y0, x1, y1) {
+            let path = [], dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+            let sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1, err = dx - dy;
+            while (true) {
+                path.push({ x: x0, y: y0 });
+                if (x0 === x1 && y0 === y1) break;
+                let e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x0 += sx; }
+                if (e2 < dx) { err += dx; y0 += sy; }
+            }
+            return path;
+        }
+
+        function drawSpellPreview() {
+            const spell = SPELL_BOOK[activeSelectedSpell];
+            const path = getLinePath(player.x, player.y, mouseHoverGridX, mouseHoverGridY);
+            let blocked = false;
+
+            path.forEach(node => {
+                if (node.x === player.x && node.y === player.y) return;
+                if (gameMap[node.y] && gameMap[node.y][node.x] === TILE.WALL) blocked = true;
+                ctx.fillStyle = blocked ? "rgba(239, 68, 68, 0.4)" : "rgba(59, 130, 246, 0.4)";
+                ctx.fillRect(node.x * TILE_SIZE, node.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            });
+        }
+
+        function activateSpellAiming(id) {
+            activeSelectedSpell = id;
+            document.getElementById('aim-mode-indicator').style.display = 'block';
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const r = canvas.getBoundingClientRect();
+            mouseHoverGridX = Math.floor((e.clientX - r.left) / TILE_SIZE);
+            mouseHoverGridY = Math.floor((e.clientY - r.top) / TILE_SIZE);
+            if (activeSelectedSpell) drawScene();
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!activeSelectedSpell) return;
+            castSpell(activeSelectedSpell, mouseHoverGridX, mouseHoverGridY);
+            activeSelectedSpell = null;
+            document.getElementById('aim-mode-indicator').style.display = 'none';
+        });
+
+        // --- DRAG AND DROP INVENTORY ENGINE ---
+        function initInventoryUI() {
+            const bag = document.getElementById('player-bag');
+            bag.innerHTML = '';
+            for (let i = 0; i < 24; i++) {
+                let s = document.createElement('div');
+                s.className = 'slot'; s.id = `bag-${i}`; s.dataset.slotType = "any";
+                s.setAttribute('ondragover', 'allowDrop(event)'); s.setAttribute('ondragleave', 'clearDragState(event)'); s.setAttribute('ondrop', 'handleDrop(event)');
+                if (inventoryState.bag[i]) s.appendChild(createItemNode(inventoryState.bag[i]));
+                bag.appendChild(s);
+            }
+            recalculateCharacterStats();
+        }
+
+        function createItemNode(id) {
+            let n = document.createElement('div');
+            n.className = 'item-sprite'; n.id = id; n.draggable = true;
+            n.setAttribute('ondragstart', 'handleDragStart(event)');
+            n.style.backgroundPosition = `-${ITEMS_DATABASE[id].bgX * 32}px -${ITEMS_DATABASE[id].bgY * 32}px`;
+            return n;
+        }
+
+        function handleDragStart(e) { e.dataTransfer.setData("text", e.target.id); }
+        function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function clearDragState(e) { e.currentTarget.classList.remove('drag-over'); }
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget; slot.classList.remove('drag-over');
+            const id = e.dataTransfer.getData("text");
+            if (slot.dataset.slotType !== "any" && slot.dataset.slotType !== ITEMS_DATABASE[id].slotType) return;
+            
+            let moved = document.getElementById(id);
+            if (slot.children.length === 0 || slot.children[0].className === 'slot-label') {
+                slot.appendChild(moved);
+            }
+            recalculateCharacterStats();
+        }
+
+        function recalculateCharacterStats() {
+            let atk = 10 + Math.floor(player.stats.str / 5);
+            let def = Math.floor(player.stats.con / 5);
+            const w = document.getElementById('slot-main_hand').querySelector('.item-sprite');
+            const a = document.getElementById('slot-torso').querySelector('.item-sprite');
+            if (w) atk += ITEMS_DATABASE[w.id].atk;
+            if (a) def += ITEMS_DATABASE[a.id].def;
+            document.getElementById('stat-atk').innerText = atk;
+            document.getElementById('stat-def').innerText = def;
+        }
+
+        // --- PROGRESSION LEVELING SYSTEM ---
+        function gainExperience(amt) {
+            player.xp += amt;
+            if (player.xp >= player.xpNeeded) {
+                player.level++; player.xp -= player.xpNeeded; player.xpNeeded = player.level * 100;
+                player.hp = player.maxHp; player.mp = player.maxMp;
+                document.getElementById('level-up-modal').style.display = 'flex';
+            }
+        }
+
+        function allocateStatPoint(key) {
+            player.stats[key]++;
+            if (key === 'con') { player.maxHp += 8; player.hp += 8; }
+            if (key === 'int') { player.maxMp += 5; player.mp += 5; }
+            document.getElementById('level-up-modal').style.display = 'none';
+            drawScene();
+        }
+
+        // --- PERSISTENT DATA SAVE SYSTEMS ---
+        function saveGame() {
+            const save = { dungeonLevel, turnCount, player, gameMap, activeChests, enemy, inventory: { bag: [...inventoryState.bag] } };
+            localStorage.setItem(SAVE_SLOT_KEY, JSON.stringify(save));
+            logMessage("💾 Game state cataloged successfully!");
+        }
+
+        function loadGame() {
+            const raw = localStorage.getItem(SAVE_SLOT_KEY);
+            if (!raw) { logMessage("⚠️ No save data block exists."); return false; }
+            const data = JSON.parse(raw);
+            dungeonLevel = data.dungeonLevel; turnCount = data.turnCount; player = data.player;
+            gameMap = data.gameMap; activeChests = data.activeChests; enemy = data.enemy;
+            inventoryState.bag = data.inventory.bag;
+            initInventoryUI(); drawScene();
+            logMessage(`📂 Restored floor checkpoint depth ${dungeonLevel}.`);
+            return true;
+        }
+
+        // --- UTILS & EVENT CAPTURE LOOPS ---
+        function logMessage(m) {
+            const b = document.getElementById('log-box');
+            b.innerHTML += `<div>${m}</div>`; b.scrollTop = b.scrollHeight;
+        }
+
+        function updateUIDisplays() {
+            document.getElementById('floor-display').innerText = dungeonLevel;
+            document.getElementById('lvl-display').innerText = player.level;
+            document.getElementById('xp-display').innerText = player.xp;
+            document.getElementById('xpneeded-display').innerText = player.xpNeeded;
+            document.getElementById('hp-display').innerText = `${player.hp} / ${player.maxHp}`;
+            document.getElementById('mp-display').innerText = `${player.mp} / ${player.maxMp}`;
+            document.getElementById('turn-display').innerText = turnCount;
+            document.getElementById('stat-str').innerText = player.stats.str;
+            document.getElementById('stat-int').innerText = player.stats.int;
+            document.getElementById('stat-con').innerText = player.stats.con;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (gameState === 'TITLE') return;
+            if (document.getElementById('level-up-modal').style.display === 'flex') return;
+            switch(e.key.toLowerCase()) {
+                case 'arrowup':    case 'w': processMove(0, -1); break;
+                case 'arrowdown':  case 's': processMove(0, 1);  break;
+                case 'arrowleft':  case 'a': processMove(-1, 0); break;
+                case 'arrowright': case 'd': processMove(1, 0);  break;
+                case 'enter':
+                    if (gameMap[player.y][player.x] === TILE.STAIRS_DOWN) {
+                        dungeonLevel++; generateProceduralFloor(); drawScene();
+                        logMessage(`🏁 Descended steps safely into depth level ${dungeonLevel}.`);
+                    }
+                    break;
+            }
+        });
+
+        // Initialize setup loops on load
+        initInventoryUI();
+        spriteSheet.onload = () => { showTitleScreen(); };
+    </script>
+</body>
+</html>
