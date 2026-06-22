@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dungeons of Oddy - Sandbox Master Alpha Build</title>
+    <title>Dungeons of Oddy - Sandbox Beta Build</title>
     <style>
         body {
             background-color: #0f172a;
@@ -116,10 +116,9 @@
         <div style="position: relative; width: 800px; height: 576px;">
             <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
             
-            <!-- Game Over / Title Screen Interface Layer Component -->
             <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
                 <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);">DUNGEONS OF ODDY</h1>
-                <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Retro Norse Roguelike Sandbox Alpha</p>
+                <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Procedural Roguelike Sandbox Beta</p>
                 
                 <div style="display: flex; flex-direction: column; gap: 15px; width: 280px;">
                     <button onclick="startNewGame()" style="background-color: #3b82f6; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px;">🛡️ Start New Adventure</button>
@@ -127,7 +126,6 @@
             </div>
         </div>
         
-        <!-- Main Sidebar Panel Interface Component -->
         <div class="panel">
             <div>
                 <div style="display: flex; gap: 8px; margin-bottom: 15px;">
@@ -142,7 +140,6 @@
                 <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6;">30 / 30</span></div>
                 <div class="stat-line">Turns Ticked: <span id="turn-display">0</span></div>
 
-                <!-- Core Progressive Stat Dynamic Sheet Attributes Frame Component -->
                 <div id="stat-sheet" style="font-size: 11px; line-height: 1.8; background:#1e293b; padding:10px; border-radius:6px; margin: 12px 0; border: 1px solid #334155;">
                     <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Unspent Attributes Pool: <span id="stat-points-display">0</span></div>
                     
@@ -183,13 +180,11 @@
         </div>
     </div>
 
-    <!-- Carrying Bag Sub-Container Block Element -->
     <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px; box-sizing: border-box;">
         <h3 style="margin:0; border:none; white-space: nowrap;">Carrying Bag:</h3>
         <div class="bag-grid" id="player-bag" style="flex-grow: 1;"></div>
     </div>
 
-    <!-- MASTER COORDINATE ALIGNMENT STUDIO PANEL -->
     <div id="mapper-studio">
         <h3 style="color: #3b82f6; margin-bottom: 5px;">🔧 Interactive Sprite Sheet Alignment Studio</h3>
         <p style="font-size: 12px; color: #94a3b8; margin-top: 0; margin-bottom: 15px;">
@@ -221,7 +216,7 @@
         const TILE_SIZE = SPRITE_SIZE * RENDER_SCALE; // The game grid is now 32x32 visually
         const MAP_WIDTH = 25;
         const MAP_HEIGHT = 18;
-        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v3";
+        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v4";
 
         const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5, DOOR_LOCKED: 6 };
 
@@ -246,12 +241,12 @@
         let currentMappingTarget = null;
 
         let player = {
-            x: 3, y: 3, hp: 20, maxHp: 20, mp: 30, maxMp: 30, level: 1, xp: 0, xpNeeded: 100,
+            x: 0, y: 0, hp: 20, maxHp: 20, mp: 30, maxMp: 30, level: 1, xp: 0, xpNeeded: 100,
             statPoints: 0,
             stats: { str: 10, int: 10, con: 10 }
         };
 
-        let enemy = { x: 14, y: 6, hp: 12, maxHp: 12, active: true };
+        let enemy = { x: 0, y: 0, hp: 12, maxHp: 12, active: false };
 
         const spriteSheet = new Image();
         spriteSheet.crossOrigin = "anonymous"; 
@@ -270,15 +265,13 @@
         function startNewGame() {
             gameState = 'PLAYING';
             
-            // Re-initialize dynamic view styling structures completely
             const overlay = document.getElementById('title-screen-overlay');
             overlay.style.display = 'none';
             overlay.querySelector('h1').innerText = "DUNGEONS OF ODDY";
             overlay.querySelector('h1').style.color = "#3b82f6";
-            overlay.querySelector('p').innerText = "A Retro Norse Roguelike Sandbox Alpha";
+            overlay.querySelector('p').innerText = "A Procedural Roguelike Sandbox Beta";
             overlay.querySelector('button').innerText = "🛡️ Start New Adventure";
             
-            // Core baseline dataset state values clean reset
             dungeonLevel = 1;
             turnCount = 0;
             player.level = 1;
@@ -287,34 +280,77 @@
             player.statPoints = 0;
             player.stats = { str: 10, int: 10, con: 10 };
             
-            // Load and run initial mathematical matrix calculation rules
             recalculateCharacterStats();
             player.hp = player.maxHp;
             player.mp = player.maxMp;
             
             clearLog();
-            logMessage("⚔️ A fresh sandbox quest begins! Defend yourself!");
+            logMessage("⚔️ A fresh procedural quest begins! Defend yourself!");
 
             generateMapLayout();
             initInventoryUI();
             drawScene();
         }
 
+        // --- BETA FEATURE: PROCEDURAL DUNGEON GENERATOR ---
+        function randInt(min, max) { 
+            return Math.floor(Math.random() * (max - min + 1)) + min; 
+        }
+
         function generateMapLayout() {
             gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
-            carveRoom(2, 2, 7, 5);
-            carveRoom(12, 4, 9, 8);
-            
-            for(let x = 8; x <= 12; x++) gameMap[4][x] = TILE.FLOOR;
-            gameMap[4][9] = TILE.DOOR_CLOSED;
+            let rooms = [];
+            const MAX_ROOMS = 5;
+            const MIN_SIZE = 4;
+            const MAX_SIZE = 7;
+            enemy.active = false; // Reset enemy per floor
 
-            gameMap[3][3] = TILE.STAIRS_UP;
-            gameMap[5][15] = TILE.STAIRS_DOWN;
-            
-            player.x = 3; player.y = 4;
-            gameMap[2][5] = TILE.CHEST;
+            for (let i = 0; i < 30; i++) {
+                let w = randInt(MIN_SIZE, MAX_SIZE);
+                let h = randInt(MIN_SIZE, MAX_SIZE);
+                let x = randInt(1, MAP_WIDTH - w - 1);
+                let y = randInt(1, MAP_HEIGHT - h - 1);
 
-            enemy.x = 14; enemy.y = 6; enemy.hp = 12; enemy.active = true;
+                let failed = false;
+                for (let room of rooms) {
+                    if (x < room.x + room.w + 1 && x + w + 1 > room.x &&
+                        y < room.y + room.h + 1 && y + h + 1 > room.y) {
+                        failed = true;
+                        break;
+                    }
+                }
+
+                if (!failed) {
+                    carveRoom(x, y, w, h);
+                    let center = { cx: Math.floor(x + w/2), cy: Math.floor(y + h/2) };
+                    
+                    if (rooms.length === 0) {
+                        player.x = center.cx;
+                        player.y = center.cy;
+                        gameMap[center.cy][center.cx] = TILE.STAIRS_UP;
+                    } else {
+                        let prevCenter = rooms[rooms.length - 1].center;
+                        carveCorridor(prevCenter.cx, prevCenter.cy, center.cx, center.cy);
+                        
+                        if (!enemy.active && randInt(1, 100) > 40) {
+                            enemy.active = true;
+                            enemy.x = center.cx;
+                            enemy.y = center.cy;
+                            enemy.maxHp = 10 + (dungeonLevel * 2); 
+                            enemy.hp = enemy.maxHp;
+                        }
+                        if (randInt(1, 100) > 70) {
+                            gameMap[center.cy][center.cx + 1] = TILE.CHEST;
+                        }
+                    }
+                    
+                    rooms.push({ x, y, w, h, center });
+                    if (rooms.length >= MAX_ROOMS) break;
+                }
+            }
+
+            let lastRoom = rooms[rooms.length - 1];
+            gameMap[lastRoom.center.cy][lastRoom.center.cx] = TILE.STAIRS_DOWN;
         }
 
         function carveRoom(rx, ry, w, h) {
@@ -322,6 +358,19 @@
                 for(let x = rx; x < rx+w; x++) {
                     gameMap[y][x] = TILE.FLOOR;
                 }
+            }
+        }
+
+        function carveCorridor(x1, y1, x2, y2) {
+            let x = x1;
+            let y = y1;
+            while (x !== x2) {
+                gameMap[y][x] = TILE.FLOOR;
+                x += (x < x2) ? 1 : -1;
+            }
+            while (y !== y2) {
+                gameMap[y][x] = TILE.FLOOR;
+                y += (y < y2) ? 1 : -1;
             }
         }
 
@@ -335,7 +384,6 @@
                     
                     if (tileType === TILE.FLOOR) key = 'FLOOR';
                     
-                    // Render sub-layer background floors everywhere underneath assets
                     if (tileType !== TILE.WALL) {
                         drawSprite('FLOOR', x, y);
                     }
@@ -388,6 +436,16 @@
                 return;
             }
 
+            if (gameMap[targetY][targetX] === TILE.STAIRS_DOWN) {
+                dungeonLevel++;
+                logMessage(`🧗 You descend deeper into the darkness of Floor ${dungeonLevel}...`);
+                
+                player.hp = Math.min(player.maxHp, player.hp + 5); 
+                generateMapLayout(); 
+                drawScene();
+                return;
+            }
+
             if (enemy.active && targetX === enemy.x && targetY === enemy.y) {
                 let damageExecuted = 3 + Math.floor((player.stats.str - 10) / 2);
                 enemy.hp -= damageExecuted;
@@ -410,7 +468,6 @@
         function endPlayerTurn() {
             turnCount++;
             
-            // Execute basic enemy automated responses loop
             if (enemy.active) {
                 let dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
                 if (dist === 1) {
@@ -422,27 +479,24 @@
 
             drawScene();
             
-            // Handle critical structural check condition updates for death states
             if (player.hp <= 0) {
                 triggerGameOver();
             }
         }
 
-        // --- IMMORTALITY LOOP GUARD: GAME OVER CONTROLLERS ---
         function triggerGameOver() {
             gameState = 'GAMEOVER';
-            logMessage("💀 **YOU PERISHED!** The layout claims your soul.");
+            logMessage("💀 **YOU PERISHED!** The dungeon claims your soul.");
             
             const overlay = document.getElementById('title-screen-overlay');
             overlay.style.display = 'flex';
             
             overlay.querySelector('h1').innerText = "GAME OVER";
             overlay.querySelector('h1').style.color = "#ef4444";
-            overlay.querySelector('p').innerText = `Died on Floor ${dungeonLevel} after surviving ${turnCount} turns inside the system grid.`;
-            overlay.querySelector('button').innerText = "🛡️ Try Again (Respawn Model)";
+            overlay.querySelector('p').innerText = `Died on Floor ${dungeonLevel} after surviving ${turnCount} turns.`;
+            overlay.querySelector('button').innerText = "🛡️ Try Again (Respawn)";
         }
 
-        // --- PROGRESSION LEVEL-UP AND CHARACTER CALCULATOR MATHEMATICS ---
         function recalculateCharacterStats() {
             player.maxHp = 10 + (player.stats.con * 1); 
             player.maxMp = 10 + (player.stats.int * 2);
@@ -485,7 +539,6 @@
                 player.xp -= player.xpNeeded;
                 player.xpNeeded = player.level * 100;
                 
-                // Grant system upgrade tokens
                 player.statPoints += 3;
                 
                 recalculateCharacterStats();
@@ -496,7 +549,6 @@
             }
         }
 
-        // --- INTERACTIVE ALIGNMENT LAYOUT STUDIO SYSTEMS ---
         function setMappingTarget(target, btn) {
             currentMappingTarget = target;
             document.querySelectorAll('.mapper-btn').forEach(b => b.classList.remove('active'));
@@ -559,7 +611,6 @@
             alert("Matrix configuration array produced! Press F12 to copy your custom code block from your developer log window.");
         }
 
-        // --- SUB-PANEL UTILITIES ---
         function initInventoryUI() {
             const bag = document.getElementById('player-bag');
             bag.innerHTML = '';
