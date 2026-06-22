@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine Sandbox</title>
+    <title>Dungeon Engine</title>
     <style>
         body {
             background-color: #1e1e2f;
@@ -15,43 +15,35 @@
             padding: 20px;
             margin: 0;
         }
-
         h1 { color: #ffffff; }
-
         .container {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
             justify-content: center;
         }
-
         .panel {
             background-color: #2a2a3b;
             padding: 15px;
             border-radius: 8px;
             border: 2px solid #3b3b4f;
         }
-
-        /* Prevent the canvas from blurring when scaled by CSS */
         canvas {
             background-color: #000;
             image-rendering: pixelated; 
         }
-
-        /* Protect the studio canvas from getting crushed */
         #studioCanvas {
             flex-shrink: 0;
             object-fit: contain;
             cursor: crosshair;
         }
-
         .controls {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 8px;
             margin-top: 10px;
+            max-width: 416px;
         }
-
         button {
             background-color: #3b82f6;
             color: white;
@@ -62,10 +54,8 @@
             font-family: inherit;
             font-weight: bold;
         }
-
         button:hover { background-color: #2563eb; }
         button.active { background-color: #10b981; }
-
         #log {
             margin-top: 20px;
             color: #10b981;
@@ -84,12 +74,15 @@
 
         <div class="panel">
             <h3>Alignment Studio</h3>
-            <img id="sourceImage" src="your-sprite-sheet.png" style="display:none;" alt="Sprite Sheet">
+            <img id="sourceImage" src="image_9ef1c2.jpg" style="display:none;" alt="Sprite Sheet">
             <canvas id="studioCanvas" width="416" height="352"></canvas>
             
             <div class="controls" id="mapper-controls">
                 <button onclick="setTarget('WALL', this)">Map Wall</button>
+                <button onclick="setTarget('WALL_TORCH', this)">🔥 Map Torch Wall</button>
+                <button onclick="setTarget('WALL_MOSS', this)">🌿 Map Mossy Wall</button>
                 <button onclick="setTarget('FLOOR', this)">Map Floor</button>
+                <button onclick="setTarget('FLOOR_CRACKED', this)">🕸️ Map Cracked Floor</button>
                 <button onclick="setTarget('PLAYER', this)">Map Player</button>
                 <button onclick="setTarget('GOBLIN', this)">Map Goblin</button>
                 <button onclick="setTarget('CHEST', this)">Map Chest</button>
@@ -105,15 +98,21 @@ const GAME_TILE = 32;    // The rendered size in the game window
 const MAP_WIDTH = 25;
 const MAP_HEIGHT = 18;
 
-const TILE = { WALL: 0, FLOOR: 1 };
+const TILE = { 
+    WALL: 0, FLOOR: 1, 
+    WALL_TORCH: 2, WALL_MOSS: 3, FLOOR_CRACKED: 4 
+};
 
-// w and h dictate how many 16px squares the sprite uses
+// Default mapping (w and h dictate how many 16px squares the sprite uses)
 let SPRITE_MAP = {
-    WALL:   { col: 0, row: 0, w: 1, h: 1 }, 
-    FLOOR:  { col: 1, row: 0, w: 1, h: 1 }, 
-    PLAYER: { col: 0, row: 1, w: 2, h: 2 }, 
-    GOBLIN: { col: 2, row: 1, w: 2, h: 2 },
-    CHEST:  { col: 4, row: 1, w: 2, h: 2 }
+    WALL:          { col: 0, row: 0, w: 1, h: 1 }, 
+    WALL_TORCH:    { col: 0, row: 0, w: 1, h: 1 }, 
+    WALL_MOSS:     { col: 0, row: 0, w: 1, h: 1 }, 
+    FLOOR:         { col: 1, row: 0, w: 1, h: 1 }, 
+    FLOOR_CRACKED: { col: 1, row: 0, w: 1, h: 1 }, 
+    PLAYER:        { col: 0, row: 1, w: 2, h: 2 }, 
+    GOBLIN:        { col: 2, row: 1, w: 2, h: 2 },
+    CHEST:         { col: 4, row: 1, w: 2, h: 2 }
 };
 
 let gameMap = [];
@@ -135,22 +134,32 @@ spriteSheet.onload = () => {
     gCtx.imageSmoothingEnabled = false;
     sCtx.imageSmoothingEnabled = false;
 
-    // Adjust studio canvas to fit whatever image you loaded
-    sCanvas.width = spriteSheet.width || 416;
-    sCanvas.height = spriteSheet.height || 352;
+    // Use naturalWidth to fix hidden image bug
+    if (spriteSheet.naturalWidth > 0) {
+        sCanvas.width = spriteSheet.naturalWidth;
+        sCanvas.height = spriteSheet.naturalHeight;
+    } else {
+        sCanvas.width = 416;
+        sCanvas.height = 352;
+    }
 
-    generateDummyMap();
+    generateMap();
     renderStudioGrid();
     drawScene();
 };
 
-// Fallback in case image takes a moment to load
 if (spriteSheet.complete) spriteSheet.onload();
 
-// --- 4. ENGINE FUNCTIONS ---
+// Utility function for random numbers
+function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-// Generates a simple walled room for testing
-function generateDummyMap() {
+// --- 4. ENGINE FUNCTIONS ---
+function generateMap() {
+    gameMap = [];
+    
+    // Basic Walled Room
     for (let y = 0; y < MAP_HEIGHT; y++) {
         let row = [];
         for (let x = 0; x < MAP_WIDTH; x++) {
@@ -162,6 +171,31 @@ function generateDummyMap() {
         }
         gameMap.push(row);
     }
+
+    // --- DECORATOR PASS ---
+    for (let y = 1; y < MAP_HEIGHT - 1; y++) {
+        for (let x = 1; x < MAP_WIDTH - 1; x++) {
+            
+            // Decorate Inner Walls (pretend we added internal walls)
+            if (gameMap[y][x] === TILE.WALL) {
+                let rand = randInt(1, 100);
+                if (rand <= 10) gameMap[y][x] = TILE.WALL_TORCH;
+                else if (rand <= 25) gameMap[y][x] = TILE.WALL_MOSS;
+            }
+            
+            // Decorate Top Perimeter Walls
+            if (y === 0 && gameMap[y][x] === TILE.WALL) {
+                let rand = randInt(1, 100);
+                if (rand <= 15) gameMap[y][x] = TILE.WALL_TORCH;
+            }
+            
+            // Decorate Floors
+            if (gameMap[y][x] === TILE.FLOOR) {
+                let rand = randInt(1, 100);
+                if (rand <= 8) gameMap[y][x] = TILE.FLOOR_CRACKED; 
+            }
+        }
+    }
 }
 
 // The core rendering logic
@@ -169,11 +203,9 @@ function drawSprite(key, gridX, gridY) {
     const spr = SPRITE_MAP[key];
     if (!spr) return;
     
-    // Calculate size on source image
     const sourceWidth = spr.w * SHEET_GRID;
     const sourceHeight = spr.h * SHEET_GRID;
     
-    // Draw and scale cleanly to GAME_TILE (32px)
     gCtx.drawImage(
         spriteSheet, 
         spr.col * SHEET_GRID, 
@@ -194,15 +226,24 @@ function drawScene() {
     for (let y = 0; y < MAP_HEIGHT; y++) {
         for (let x = 0; x < MAP_WIDTH; x++) {
             let tileType = gameMap[y][x];
+            
+            // Draw floor under variants to avoid black transparency gaps
+            if (tileType !== TILE.WALL && tileType !== TILE.WALL_TORCH && tileType !== TILE.WALL_MOSS) {
+                drawSprite('FLOOR', x, y);
+            }
+            
             if (tileType === TILE.FLOOR) drawSprite('FLOOR', x, y);
+            if (tileType === TILE.FLOOR_CRACKED) drawSprite('FLOOR_CRACKED', x, y);
             if (tileType === TILE.WALL) drawSprite('WALL', x, y);
+            if (tileType === TILE.WALL_TORCH) drawSprite('WALL_TORCH', x, y);
+            if (tileType === TILE.WALL_MOSS) drawSprite('WALL_MOSS', x, y);
         }
     }
 
     // Draw dummy entities
     drawSprite('CHEST', 12, 5);
     drawSprite('GOBLIN', 15, 8);
-    drawSprite('PLAYER', 12, 9); // Centered player
+    drawSprite('PLAYER', 12, 9); 
 }
 
 // --- 5. ALIGNMENT STUDIO LOGIC ---
@@ -224,9 +265,9 @@ sCanvas.addEventListener('click', (e) => {
     const col = Math.floor((e.clientX - rect.left) / SHEET_GRID);
     const row = Math.floor((e.clientY - rect.top) / SHEET_GRID);
     
-    // Keep the dictionary's w/h values intact!
-    const existingW = SPRITE_MAP[currentMappingTarget].w || 1;
-    const existingH = SPRITE_MAP[currentMappingTarget].h || 1;
+    // Safety check for existing width and height
+    const existingW = SPRITE_MAP[currentMappingTarget] ? SPRITE_MAP[currentMappingTarget].w : 1;
+    const existingH = SPRITE_MAP[currentMappingTarget] ? SPRITE_MAP[currentMappingTarget].h : 1;
 
     SPRITE_MAP[currentMappingTarget] = { col, row, w: existingW, h: existingH };
     document.getElementById('log').innerText = `✅ Mapped [${currentMappingTarget}] to Col: ${col}, Row: ${row}`;
@@ -237,25 +278,21 @@ sCanvas.addEventListener('click', (e) => {
 
 function renderStudioGrid() {
     sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
-    
-    // Draw the base image
     sCtx.drawImage(spriteSheet, 0, 0);
     
     const cols = sCanvas.width / SHEET_GRID;
     const rows = sCanvas.height / SHEET_GRID;
 
-    // Draw the selection grid
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
             sCtx.strokeRect(c * SHEET_GRID, r * SHEET_GRID, SHEET_GRID, SHEET_GRID);
             
-            // Highlight mapped sprites
             for (let key in SPRITE_MAP) {
                 let spr = SPRITE_MAP[key];
-                if (spr.col === c && spr.row === r) {
-                    let w = spr.w * SHEET_GRID;
-                    let h = spr.h * SHEET_GRID;
+                if (spr && spr.col === c && spr.row === r) {
+                    let w = (spr.w || 1) * SHEET_GRID;
+                    let h = (spr.h || 1) * SHEET_GRID;
                     
                     sCtx.strokeStyle = "#3b82f6";
                     sCtx.lineWidth = 2;
