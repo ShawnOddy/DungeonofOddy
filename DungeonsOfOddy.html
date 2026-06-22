@@ -11,10 +11,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
+            justify-content: flex-start; /* FIX: Prevents center-collapse from clipping top */
+            min-height: 100vh;           /* FIX: Allows the window to grow naturally */
+            padding: 30px 20px;          /* FIX: Gives breathing room at top and bottom */
             margin: 0;
             user-select: none;
+            overflow-y: auto;            /* FIX: Restores scroll tracking */
         }
         #game-container {
             display: flex;
@@ -52,12 +54,12 @@
         }
         .bag-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(12, 1fr); /* Unified layout constraints */
             gap: 8px;
             background-color: #1e293b;
             padding: 8px;
             border-radius: 6px;
-            min-height: 140px;
+            min-height: 56px;
         }
         .slot {
             background-color: #334155;
@@ -76,7 +78,7 @@
             width: 32px;
             height: 32px;
             cursor: grab;
-            background-image: url('spritesheet.jpg'); /* STRICT LOWERCASE MATCH */
+            background-image: url('spritesheet.png');
             background-size: 832px 704px; 
             image-rendering: pixelated;
         }
@@ -104,6 +106,7 @@
         <div style="position: relative; width: 800px; height: 576px;">
             <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
             
+            <!-- Title Screen Overlay Layer -->
             <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
                 <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); font-family: 'Courier New', monospace;">DUNGEONS OF ODDY</h1>
                 <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Retro Norse Roguelike Sandbox Alpha</p>
@@ -160,6 +163,7 @@
         </div>
     </div>
 
+    <!-- Attribute Allocation Pop-up Modal -->
     <div id="level-up-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); z-index: 100; align-items: center; justify-content: center;">
         <div style="background: #1e293b; border: 3px solid #3b82f6; border-radius: 8px; padding: 25px; width: 340px; text-align: center; box-shadow: 0 20px 25px rgba(0,0,0,0.5);">
             <h2 style="color: #3b82f6; margin-top: 0; font-size:18px;">✨ LEVEL UP STIMULUS ✨</h2>
@@ -175,9 +179,10 @@
         </div>
     </div>
 
-    <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px;">
+    <!-- Carrying Pack Sack System Panel -->
+    <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px; box-sizing: border-box;">
         <h3 style="margin:0; border:none; white-space: nowrap;">Inventory Carrying Sack:</h3>
-        <div class="bag-grid" id="player-bag" style="flex-grow: 1; grid-template-columns: repeat(12, 1fr); min-height:56px;"></div>
+        <div class="bag-grid" id="player-bag" style="flex-grow: 1;"></div>
     </div>
 
     <script>
@@ -189,11 +194,10 @@
 
         const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5 };
 
-        // Calibrated item database positions matching your exact item rows!
         const ITEMS_DATABASE = {
-            "broadsword_01": { id: "broadsword_01", name: "Iron Broadsword", slotType: "main_hand", atk: 12, def: 0, bgX: 0, bgY: 14 },
-            "chainmail_01":  { id: "chainmail_01",  name: "Chain Mail",     slotType: "torso",     atk: 0,  def: 6, bgX: 23, bgY: 14 },
-            "potion_heal":   { id: "potion_heal",   name: "Healing Potion", slotType: "any",       atk: 0,  def: 0, bgX: 20, bgY: 12 }
+            "broadsword_01": { id: "broadsword_01", name: "Iron Broadsword", slotType: "main_hand", atk: 12, def: 0, bgX: 19, bgY: 0 }, 
+            "chainmail_01":  { id: "chainmail_01",  name: "Chain Mail",     slotType: "torso",     atk: 0,  def: 6, bgX: 23, bgY: 1 }, 
+            "potion_heal":   { id: "potion_heal",   name: "Healing Potion", slotType: "any",       atk: 0,  def: 0, bgX: 21, bgY: 2 }  
         };
 
         const SPELL_BOOK = {
@@ -216,29 +220,27 @@
         };
 
         let enemy = { x: 0, y: 0, hp: 14, maxHp: 14, xpValue: 50, active: true };
-        let inventoryState = { bag: ["broadsword_01", "potion_heal"] };
+        let inventoryState = { bag: ["broadsword_01", "potion_heal"], equipped: { main_hand: null, torso: null } };
 
         // --- IMAGES AND RENDERING ANCHORS ---
         const spriteSheet = new Image();
         spriteSheet.crossOrigin = "anonymous"; 
-        spriteSheet.src = 'spritesheet.jpg'; // FIXED EXTENSION (LOWERCASE ONLY FOR GITHUB COMPLIANCE)
+        spriteSheet.src = 'spritesheet.png';
 
-        // Pixel-perfect sprite coordinate grid mapping from your exact image file
         const SPRITE_MAP = {
-            WALL:        { col: 3,  row: 3 }, // Solid brick stone wall (removes door frame artifacts)
-            FLOOR:       { col: 6,  row: 3 }, // Clean grey stone paving block
-            DOOR_CLOSED: { col: 6,  row: 2 }, // Dark dungeon arch doorway
-            PLAYER:      { col: 0,  row: 7 }, // The blue Knight character row 
-            GOBLIN:      { col: 8,  row: 7 }, // The green classic Goblin monster row
-            CHEST:       { col: 18, row: 0 }, // Gold-banded treasure box
-            STAIRS_DOWN: { col: 16, row: 2 }, // Crypt steps leading down
-            STAIRS_UP:   { col: 15, row: 2 }  // Crypt steps leading back up
+            WALL:        { col: 3,  row: 3 }, 
+            FLOOR:       { col: 6,  row: 3 }, 
+            DOOR_CLOSED: { col: 6,  row: 2 }, 
+            PLAYER:      { col: 0,  row: 5 }, 
+            GOBLIN:      { col: 8,  row: 5 }, 
+            CHEST:       { col: 18, row: 0 }, 
+            STAIRS_DOWN: { col: 16, row: 2 }, 
+            STAIRS_UP:   { col: 15, row: 2 }  
         };
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // --- GAME ENTRY STATE MACHINES ---
         function showTitleScreen() {
             gameState = 'TITLE';
             document.getElementById('title-screen-overlay').style.display = 'flex';
@@ -253,6 +255,12 @@
             player.hp = player.maxHp;
             player.mp = player.maxMp;
             inventoryState.bag = ["broadsword_01", "potion_heal"];
+            inventoryState.equipped = { main_hand: null, torso: null };
+            
+            // Wipe gear nodes
+            document.getElementById('slot-main_hand').innerHTML = '<span class="slot-label">Weapon</span>';
+            document.getElementById('slot-torso').innerHTML = '<span class="slot-label">Armor</span>';
+            
             generateProceduralFloor();
             initInventoryUI();
             drawScene();
@@ -260,12 +268,12 @@
         }
 
         function loadGameFromTitle() {
-            loadGame();
-            gameState = 'PLAYING';
-            document.getElementById('title-screen-overlay').style.display = 'none';
+            if(loadGame()) {
+                gameState = 'PLAYING';
+                document.getElementById('title-screen-overlay').style.display = 'none';
+            }
         }
 
-        // --- MAP GENERATION PIPELINE ---
         function generateProceduralFloor() {
             gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
             carveRoom(2, 2, 7, 5);
@@ -293,7 +301,6 @@
             }
         }
 
-        // --- GRAPHICS DRAW SEQUENCE ---
         function drawScene() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -302,6 +309,11 @@
                     let tileType = gameMap[y][x];
                     let key = 'WALL';
                     if (tileType === TILE.FLOOR) key = 'FLOOR';
+                    
+                    if (tileType === TILE.DOOR_CLOSED || tileType === TILE.CHEST || tileType === TILE.STAIRS_DOWN || tileType === TILE.STAIRS_UP) {
+                        drawSprite('FLOOR', x, y);
+                    }
+                    
                     if (tileType === TILE.DOOR_CLOSED) key = 'DOOR_CLOSED';
                     if (tileType === TILE.CHEST) key = 'CHEST';
                     if (tileType === TILE.STAIRS_DOWN) key = 'STAIRS_DOWN';
@@ -310,8 +322,14 @@
                 }
             }
 
-            if (enemy.active) drawSprite('GOBLIN', enemy.x, enemy.y);
+            if (enemy.active) {
+                drawSprite('FLOOR', enemy.x, enemy.y);
+                drawSprite('GOBLIN', enemy.x, enemy.y);
+            }
+            
+            drawSprite('FLOOR', player.x, player.y);
             drawSprite('PLAYER', player.x, player.y);
+            
             if (activeSelectedSpell) drawSpellPreview();
             updateUIDisplays();
         }
@@ -319,17 +337,14 @@
         function drawSprite(key, gridX, gridY) {
             const spr = SPRITE_MAP[key];
             if (!spr) return;
-            try {
-                ctx.drawImage(spriteSheet, spr.col * TILE_SIZE, spr.row * TILE_SIZE, TILE_SIZE, TILE_SIZE, gridX * TILE_SIZE, gridY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            } catch(e) {
-                console.error("Renderer stalled on sprite key: ", key, e);
-            }
+            ctx.drawImage(spriteSheet, spr.col * TILE_SIZE, spr.row * TILE_SIZE, TILE_SIZE, TILE_SIZE, gridX * TILE_SIZE, gridY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
 
-        // --- GAME SYSTEM INPUT ACTIONS ---
         function processMove(dx, dy) {
             let targetX = player.x + dx;
             let targetY = player.y + dy;
+            
+            if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
             let targetTile = gameMap[targetY][targetX];
 
             if (targetTile === TILE.WALL) return;
@@ -395,7 +410,6 @@
             drawScene();
         }
 
-        // --- MAGICAL SPELLCASTING HOVER SYSTEM ---
         function castSpell(spellId, targetX, targetY) {
             const spell = SPELL_BOOK[spellId];
             if (player.mp < spell.mpCost) { logMessage("⚠️ Out of Mana!"); return; }
@@ -445,11 +459,13 @@
         }
 
         function activateSpellAiming(id) {
+            if (gameState !== 'PLAYING') return;
             activeSelectedSpell = id;
             document.getElementById('aim-mode-indicator').style.display = 'block';
         }
 
         canvas.addEventListener('mousemove', (e) => {
+            if (gameState !== 'PLAYING') return;
             const r = canvas.getBoundingClientRect();
             mouseHoverGridX = Math.floor((e.clientX - r.left) / TILE_SIZE);
             mouseHoverGridY = Math.floor((e.clientY - r.top) / TILE_SIZE);
@@ -457,13 +473,13 @@
         });
 
         canvas.addEventListener('click', () => {
-            if (!activeSelectedSpell) return;
+            if (!activeSelectedSpell || gameState !== 'PLAYING') return;
             castSpell(activeSelectedSpell, mouseHoverGridX, mouseHoverGridY);
             activeSelectedSpell = null;
             document.getElementById('aim-mode-indicator').style.display = 'none';
         });
 
-        // --- DRAG AND DROP INVENTORY ENGINE ---
+        // --- FIXED DATA STATE INVENTORY BACKEND ---
         function initInventoryUI() {
             const bag = document.getElementById('player-bag');
             bag.innerHTML = '';
@@ -488,6 +504,7 @@
         function handleDragStart(e) { e.dataTransfer.setData("text", e.target.id); }
         function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
         function clearDragState(e) { e.currentTarget.classList.remove('drag-over'); }
+        
         function handleDrop(e) {
             e.preventDefault();
             const slot = e.currentTarget; slot.classList.remove('drag-over');
@@ -498,21 +515,42 @@
             if (slot.children.length === 0 || slot.children[0].className === 'slot-label') {
                 slot.appendChild(moved);
             }
+            syncInventoryArrays(); // FIX: Saves array states dynamically right when dropped
+        }
+
+        function syncInventoryArrays() {
+            // Read out items from bag layout slots
+            let dynamicBag = [];
+            for(let i=0; i<24; i++) {
+                let slotNode = document.getElementById(`bag-${i}`);
+                let itemNode = slotNode ? slotNode.querySelector('.item-sprite') : null;
+                dynamicBag[i] = itemNode ? itemNode.id : null;
+            }
+            inventoryState.bag = dynamicBag;
+
+            // Read equipment slots
+            let wNode = document.getElementById('slot-main_hand').querySelector('.item-sprite');
+            let aNode = document.getElementById('slot-torso').querySelector('.item-sprite');
+            inventoryState.equipped.main_hand = wNode ? wNode.id : null;
+            inventoryState.equipped.torso = aNode ? aNode.id : null;
+
             recalculateCharacterStats();
         }
 
         function recalculateCharacterStats() {
             let atk = 10 + Math.floor(player.stats.str / 5);
             let def = Math.floor(player.stats.con / 5);
-            const w = document.getElementById('slot-main_hand').querySelector('.item-sprite');
-            const a = document.getElementById('slot-torso').querySelector('.item-sprite');
-            if (w) atk += ITEMS_DATABASE[w.id].atk;
-            if (a) def += ITEMS_DATABASE[a.id].def;
+            
+            let wNode = document.getElementById('slot-main_hand').querySelector('.item-sprite');
+            let aNode = document.getElementById('slot-torso').querySelector('.item-sprite');
+            
+            if (wNode && ITEMS_DATABASE[wNode.id]) atk += ITEMS_DATABASE[wNode.id].atk;
+            if (aNode && ITEMS_DATABASE[aNode.id]) def += ITEMS_DATABASE[aNode.id].def;
+            
             document.getElementById('stat-atk').innerText = atk;
             document.getElementById('stat-def').innerText = def;
         }
 
-        // --- PROGRESSION LEVELING SYSTEM ---
         function gainExperience(amt) {
             player.xp += amt;
             if (player.xp >= player.xpNeeded) {
@@ -530,9 +568,9 @@
             drawScene();
         }
 
-        // --- PERSISTENT DATA SAVE SYSTEMS ---
         function saveGame() {
-            const save = { dungeonLevel, turnCount, player, gameMap, activeChests, enemy, inventory: { bag: [...inventoryState.bag] } };
+            if (gameState !== 'PLAYING') return;
+            const save = { dungeonLevel, turnCount, player, gameMap, activeChests, enemy, inventory: inventoryState };
             localStorage.setItem(SAVE_SLOT_KEY, JSON.stringify(save));
             logMessage("💾 Game state cataloged successfully!");
         }
@@ -543,13 +581,25 @@
             const data = JSON.parse(raw);
             dungeonLevel = data.dungeonLevel; turnCount = data.turnCount; player = data.player;
             gameMap = data.gameMap; activeChests = data.activeChests; enemy = data.enemy;
-            inventoryState.bag = data.inventory.bag;
+            inventoryState = data.inventory;
+            
+            // Clean slot states
+            document.getElementById('slot-main_hand').innerHTML = '<span class="slot-label">Weapon</span>';
+            document.getElementById('slot-torso').innerHTML = '<span class="slot-label">Armor</span>';
+            
+            // Build gear structures out 
+            if(inventoryState.equipped?.main_hand) {
+                document.getElementById('slot-main_hand').appendChild(createItemNode(inventoryState.equipped.main_hand));
+            }
+            if(inventoryState.equipped?.torso) {
+                document.getElementById('slot-torso').appendChild(createItemNode(inventoryState.equipped.torso));
+            }
+
             initInventoryUI(); drawScene();
             logMessage(`📂 Restored floor checkpoint depth ${dungeonLevel}.`);
             return true;
         }
 
-        // --- UTILS & EVENT CAPTURE LOOPS ---
         function logMessage(m) {
             const b = document.getElementById('log-box');
             b.innerHTML += `<div>${m}</div>`; b.scrollTop = b.scrollHeight;
@@ -569,7 +619,7 @@
         }
 
         window.addEventListener('keydown', (e) => {
-            if (gameState === 'TITLE') return;
+            if (gameState !== 'PLAYING') return; // FIX: Completely blocks movement input while on title card
             if (document.getElementById('level-up-modal').style.display === 'flex') return;
             switch(e.key.toLowerCase()) {
                 case 'arrowup':    case 'w': processMove(0, -1); break;
@@ -585,7 +635,6 @@
             }
         });
 
-        // Initialize setup loops on load
         initInventoryUI();
         spriteSheet.onload = () => { showTitleScreen(); };
     </script>
