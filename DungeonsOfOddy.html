@@ -76,7 +76,7 @@
             width: 32px;
             height: 32px;
             cursor: grab;
-            background-image: url('spritesheet.jpg'); /* CORRECTED TO JPG */
+            background-image: url('spritesheet.jpg'); 
             background-size: 832px 704px; 
             image-rendering: pixelated;
         }
@@ -189,10 +189,11 @@
 
         const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5 };
 
+        // Calibrated item database positions matching your exact item rows!
         const ITEMS_DATABASE = {
-            "broadsword_01": { id: "broadsword_01", name: "Iron Broadsword", slotType: "main_hand", atk: 12, def: 0, bgX: 0, bgY: 15 },
-            "chainmail_01":  { id: "chainmail_01",  name: "Chain Mail",     slotType: "torso",     atk: 0,  def: 6, bgX: 3, bgY: 17 },
-            "potion_heal":   { id: "potion_heal",   name: "Healing Potion", slotType: "any",       atk: 0,  def: 0, bgX: 7, bgY: 15 }
+            "broadsword_01": { id: "broadsword_01", name: "Iron Broadsword", slotType: "main_hand", atk: 12, def: 0, bgX: 0, bgY: 14 },
+            "chainmail_01":  { id: "chainmail_01",  name: "Chain Mail",     slotType: "torso",     atk: 0,  def: 6, bgX: 23, bgY: 14 },
+            "potion_heal":   { id: "potion_heal",   name: "Healing Potion", slotType: "any",       atk: 0,  def: 0, bgX: 20, bgY: 12 }
         };
 
         const SPELL_BOOK = {
@@ -219,18 +220,19 @@
 
         // --- IMAGES AND RENDERING ANCHORS ---
         const spriteSheet = new Image();
-        spriteSheet.crossOrigin = "anonymous"; // Bypasses CORS protection
-        spriteSheet.src = 'spritesheet.jpg';   // CORRECTED TO JPG
+        spriteSheet.crossOrigin = "anonymous"; 
+        spriteSheet.src = 'spritesheet.jpg';   
 
+        // Calibrated map tiles matching your beautiful top-row dungeon tileset!
         const SPRITE_MAP = {
-            WALL:        { col: 1,  row: 2 },
-            FLOOR:       { col: 3,  row: 2 },
-            DOOR_CLOSED: { col: 11, row: 0 },
-            PLAYER:      { col: 0,  row: 6 },
-            GOBLIN:      { col: 8,  row: 6 },
-            CHEST:       { col: 13, row: 0 },
-            STAIRS_DOWN: { col: 16, row: 2 },
-            STAIRS_UP:   { col: 15, row: 2 }
+            WALL:        { col: 1,  row: 3 }, // Clean stone brick wall
+            FLOOR:       { col: 7,  row: 3 }, // Flat stone floor paving tile
+            DOOR_CLOSED: { col: 6,  row: 2 }, // Classic brown dungeon doorway
+            PLAYER:      { col: 0,  row: 6 }, // The blue-shielded knight (row 7)
+            GOBLIN:      { col: 8,  row: 6 }, // The green classic goblin orchestrator
+            CHEST:       { col: 18, row: 0 }, // The gold-banded treasure chest
+            STAIRS_DOWN: { col: 16, row: 2 }, // Dark descending brick archway steps
+            STAIRS_UP:   { col: 15, row: 2 }  // Ascending brick steps
         };
 
         const canvas = document.getElementById('gameCanvas');
@@ -549,7 +551,6 @@
             b.innerHTML += `<div>${m}</div>`; b.scrollTop = b.scrollHeight;
         }
 
-        // Setup layouts
         function updateUIDisplays() {
             document.getElementById('floor-display').innerText = dungeonLevel;
             document.getElementById('lvl-display').innerText = player.level;
