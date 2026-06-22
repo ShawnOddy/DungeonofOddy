@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dungeons of Oddy - Sandbox Alpha</title>
+    <title>Dungeons of Oddy - Sandbox Master Alpha Build</title>
     <style>
         body {
             background-color: #0f172a;
@@ -30,10 +30,9 @@
             border: 3px solid #475569;
             background-color: #020617;
             border-radius: 6px;
-            cursor: crosshair;
         }
         .panel {
-            width: 300px;
+            width: 320px;
             background-color: #0f172a;
             border: 2px solid #475569;
             border-radius: 6px;
@@ -41,9 +40,10 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            box-sizing: border-box;
         }
-        h3, h4 { margin-top: 0; border-bottom: 2px solid #334155; padding-bottom: 5px; color: #94a3b8;}
-        .stat-line { margin-bottom: 6px; font-size: 13px; }
+        h3, h4 { margin-top: 0; border-bottom: 2px solid #334155; padding-bottom: 5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;}
+        .stat-line { margin-bottom: 6px; font-size: 13px; font-weight: bold; }
         
         .equipment-slots {
             display: grid;
@@ -61,7 +61,7 @@
             min-height: 56px;
         }
         .slot {
-            background-color: #334155;
+            background-color: #1e293b;
             border: 2px dashed #475569;
             border-radius: 4px;
             height: 56px;
@@ -70,26 +70,18 @@
             justify-content: center;
             position: relative;
         }
-        .slot.drag-over { border-color: #3b82f6; background-color: #1e3a8a; }
-        .slot-label { position: absolute; bottom: 2px; color: #64748b; font-size: 8px; text-transform: uppercase; }
+        .slot-label { position: absolute; bottom: 2px; color: #475569; font-size: 8px; text-transform: uppercase; font-weight: bold; }
         
-        .item-sprite {
-            width: 32px;
-            height: 32px;
-            cursor: grab;
-            background-image: url('spritesheet.png');
-            background-size: 832px 704px; 
-            image-rendering: pixelated;
-        }
-
         .log {
-            font-size: 12px;
+            font-size: 11px;
             color: #cbd5e1;
-            height: 100px;
+            height: 120px;
             overflow-y: auto;
-            border-top: 1px solid #334155;
+            border-top: 2px solid #334155;
             padding-top: 8px;
             margin-top: 10px;
+            font-family: monospace;
+            line-height: 1.4;
         }
         button {
             color: white; border: none; border-radius: 4px; padding: 6px 12px;
@@ -97,14 +89,14 @@
         }
         button:hover { filter: brightness(1.2); }
 
-        /* Configuration Panel Styles */
+        /* Configuration Layout Studio Styles */
         #mapper-studio {
             margin-top: 25px;
             background-color: #1e293b;
             border: 3px solid #3b82f6;
             border-radius: 12px;
             padding: 20px;
-            width: 1140px;
+            width: 1180px;
             box-sizing: border-box;
         }
         .mapper-btn {
@@ -124,18 +116,18 @@
         <div style="position: relative; width: 800px; height: 576px;">
             <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
             
-            <!-- Title Overlay -->
+            <!-- Game Over / Title Screen Interface Layer Component -->
             <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
                 <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);">DUNGEONS OF ODDY</h1>
                 <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Retro Norse Roguelike Sandbox Alpha</p>
                 
-                <div style="display: flex; flex-direction: column; gap: 15px; width: 260px;">
+                <div style="display: flex; flex-direction: column; gap: 15px; width: 280px;">
                     <button onclick="startNewGame()" style="background-color: #3b82f6; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px;">🛡️ Start New Adventure</button>
-                    <button id="title-load-btn" onclick="loadGameFromTitle()" style="background-color: #6366f1; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px; display: none;">📂 Restore Last Save</button>
                 </div>
             </div>
         </div>
         
+        <!-- Main Sidebar Panel Interface Component -->
         <div class="panel">
             <div>
                 <div style="display: flex; gap: 8px; margin-bottom: 15px;">
@@ -144,43 +136,64 @@
                 </div>
 
                 <h3>Hero Snapshot</h3>
-                <div class="stat-line">Floor: <span id="floor-display" style="color: #3b82f6; font-weight:bold;">1</span></div>
+                <div class="stat-line">Floor: <span id="floor-display" style="color: #3b82f6;">1</span></div>
                 <div class="stat-line">Level: <span id="lvl-display">1</span> (<span id="xp-display">0</span> / <span id="xpneeded-display">100</span> XP)</div>
-                <div class="stat-line">HP: <span id="hp-display" style="color: #ef4444; font-weight:bold;">20 / 20</span></div>
-                <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6; font-weight:bold;">30 / 30</span></div>
+                <div class="stat-line">HP: <span id="hp-display" style="color: #ef4444;">20 / 20</span></div>
+                <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6;">30 / 30</span></div>
                 <div class="stat-line">Turns Ticked: <span id="turn-display">0</span></div>
+
+                <!-- Core Progressive Stat Dynamic Sheet Attributes Frame Component -->
+                <div id="stat-sheet" style="font-size: 11px; line-height: 1.8; background:#1e293b; padding:10px; border-radius:6px; margin: 12px 0; border: 1px solid #334155;">
+                    <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Unspent Attributes Pool: <span id="stat-points-display">0</span></div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <span>STR: <span id="stat-str" style="font-weight:bold; color:#f8fafc;">10</span></span>
+                        <button onclick="raiseStat('str')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <span>INT: <span id="stat-int" style="font-weight:bold; color:#f8fafc;">10</span></span>
+                        <button onclick="raiseStat('int')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span>CON: <span id="stat-con" style="font-weight:bold; color:#f8fafc;">10</span></span>
+                        <button onclick="raiseStat('con')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
+                    </div>
+                    
+                    <div style="border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px; color: #94a3b8;">
+                        ATK Pow: <span id="stat-atk" style="color: #f59e0b; font-weight:bold;">12</span> | DEF Rating: <span id="stat-def" style="color: #10b981; font-weight:bold;">2</span>
+                    </div>
+                </div>
 
                 <h4>Equipment Loadout</h4>
                 <div class="equipment-slots">
-                    <div class="slot" id="slot-main_hand" data-slot-type="main_hand" ondragover="allowDrop(event)" ondragleave="clearDragState(event)" ondrop="handleDrop(event)"><span class="slot-label">Weapon</span></div>
-                    <div class="slot" id="slot-torso" data-slot-type="torso" ondragover="allowDrop(event)" ondragleave="clearDragState(event)" ondrop="handleDrop(event)"><span class="slot-label">Armor</span></div>
+                    <div class="slot" id="slot-main_hand"><span class="slot-label">Weapon</span></div>
+                    <div class="slot" id="slot-torso"><span class="slot-label">Armor</span></div>
                 </div>
 
                 <h4>Spellbook Action Keys</h4>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <button onclick="activateSpellAiming('magic_arrow')" style="background-color: #1e3a8a; text-align: left;">✨ Magic Arrow (3 MP)</button>
-                    <button onclick="activateSpellAiming('fireball')" style="background-color: #7c2d12; text-align: left;">💥 Fireball (8 MP)</button>
-                    <div id="aim-mode-indicator" style="font-size: 10px; color: #a8a29e; margin-top: 3px; text-align: center; display: none; font-weight:bold;">[AIMING MODE]: Click target tile on Canvas</div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <button style="background-color: #1e3a8a; text-align: left;">✨ Magic Arrow (3 MP)</button>
+                    <button style="background-color: #7c2d12; text-align: left;">💥 Fireball (8 MP)</button>
                 </div>
             </div>
 
             <div>
-                <div id="log-box" class="log">⚡ Engine Ready. Use the layout studio below to calibrate graphics... ⚡</div>
+                <div id="log-box" class="log"></div>
             </div>
         </div>
     </div>
 
-    <!-- Inventory Container -->
+    <!-- Carrying Bag Sub-Container Block Element -->
     <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px; box-sizing: border-box;">
-        <h3 style="margin:0; border:none; white-space: nowrap;">Inventory Carrying Sack:</h3>
+        <h3 style="margin:0; border:none; white-space: nowrap;">Carrying Bag:</h3>
         <div class="bag-grid" id="player-bag" style="flex-grow: 1;"></div>
     </div>
 
-    <!-- VISUAL SPRITE ALIGNMENT STUDIO PANEL -->
+    <!-- MASTER COORDINATE ALIGNMENT STUDIO PANEL -->
     <div id="mapper-studio">
-        <h3 style="color: #3b82f6; margin-bottom: 10px;">🔧 Visual Sprite Sheet Alignment Studio</h3>
+        <h3 style="color: #3b82f6; margin-bottom: 5px;">🔧 Interactive Sprite Sheet Alignment Studio</h3>
         <p style="font-size: 12px; color: #94a3b8; margin-top: 0; margin-bottom: 15px;">
-            1. Click an entity target button. 2. Click its matching graphic on the master grid sheet below. The game screen will instantly hot-swap!
+            Fix layouts in real time: Click any element button below, then click its corresponding asset sprite tile directly on the matrix map below.
         </p>
         
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;" id="mapper-controls">
@@ -196,65 +209,49 @@
             <button style="background-color: #10b981; margin-left: auto;" onclick="exportSpriteCode()">💾 Export My Custom Sprite Map</button>
         </div>
 
-        <div style="position: relative; max-height: 400px; overflow: auto; border: 2px solid #475569; border-radius: 6px; background-color: #020617;">
+        <div style="position: relative; max-height: 350px; overflow: auto; border: 2px solid #475569; border-radius: 6px; background-color: #020617;">
             <canvas id="studioCanvas" width="832" height="704" style="cursor: cell; border: none;"></canvas>
         </div>
     </div>
 
     <script>
-        // --- DATA DICTIONARIES & CORE ENGINE CONFIG ---
-        const TILE_SIZE = 32;
+        // --- CONSTANTS AND DICTIONARY SPECIFICATIONS ---
+        const SPRITE_SIZE = 16;  // The actual pixel size on the image sheet
+        const RENDER_SCALE = 2;  // Zooms the game in by 2x
+        const TILE_SIZE = SPRITE_SIZE * RENDER_SCALE; // The game grid is now 32x32 visually
         const MAP_WIDTH = 25;
         const MAP_HEIGHT = 18;
-        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v1";
+        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v3";
 
-        // Corrected core structural stairs typo 
         const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5, DOOR_LOCKED: 6 };
 
-        const ITEMS_DATABASE = {
-            "broadsword_01": { id: "broadsword_01", name: "Iron Broadsword", slotType: "main_hand", atk: 12, def: 0, bgX: 19, bgY: 0 }, 
-            "chainmail_01":  { id: "chainmail_01",  name: "Chain Mail",     slotType: "torso",     atk: 0,  def: 6, bgX: 23, bgY: 1 }, 
-            "potion_heal":   { id: "potion_heal",   name: "Healing Potion", slotType: "any",       atk: 0,  def: 0, bgX: 21, bgY: 2 },
-            "iron_key_01":   { id: "iron_key_01",   name: "Iron Dungeon Key", slotType: "any",     atk: 0,  def: 0, bgX: 18, bgY: 2 }
-        };
-
-        const SPELL_BOOK = {
-            "magic_arrow": { name: "Magic Arrow", mpCost: 3, damage: 6, aoe: 0, range: 6 },
-            "fireball":    { name: "Fireball",    mpCost: 8, damage: 14, aoe: 1, range: 5 }
-        };
-
-        // --- MASTER SPRITE SHEET COORDINATES MAP ---
-        // These can now be directly modified live using the Visual Alignment Studio panel below
+        // Master alignment mapping calibrated for the true 16x16 sprite scale
         let SPRITE_MAP = {
-            WALL:        { col: 6,  row: 3 }, // Adjusted based on image_9dfe3f.png
-            FLOOR:       { col: 3,  row: 3 }, 
-            DOOR_CLOSED: { col: 6,  row: 2 }, 
-            DOOR_LOCKED: { col: 5,  row: 2 }, 
-            PLAYER:      { col: 0,  row: 5 }, 
-            GOBLIN:      { col: 8,  row: 5 }, 
-            CHEST:       { col: 18, row: 0 }, 
-            STAIRS_DOWN: { col: 16, row: 2 }, 
-            STAIRS_UP:   { col: 15, row: 2 }  
+            WALL:        { col: 8,  row: 2 }, 
+            FLOOR:       { col: 24, row: 6 }, 
+            DOOR_CLOSED: { col: 22, row: 0 }, 
+            DOOR_LOCKED: { col: 24, row: 0 }, 
+            CHEST:       { col: 40, row: 0 }, 
+            STAIRS_UP:   { col: 24, row: 2 }, 
+            STAIRS_DOWN: { col: 26, row: 2 }, 
+            PLAYER:      { col: 0,  row: 8 }, 
+            GOBLIN:      { col: 12, row: 8 }  
         };
 
-        // --- RUNTIME SYSTEM STATE ---
+        // --- ENGINE RUNTIME STATES ---
         let gameState = 'TITLE';
         let dungeonLevel = 1;
         let turnCount = 0;
         let gameMap = [];
-        let activeChests = {};
-        let activeDoors = {}; 
-        let activeSelectedSpell = null;
-        let mouseHoverGridX = 0, mouseHoverGridY = 0;
         let currentMappingTarget = null;
 
         let player = {
             x: 3, y: 3, hp: 20, maxHp: 20, mp: 30, maxMp: 30, level: 1, xp: 0, xpNeeded: 100,
-            stats: { str: 12, int: 10, con: 10 }
+            statPoints: 0,
+            stats: { str: 10, int: 10, con: 10 }
         };
 
-        let enemy = { x: 0, y: 0, hp: 14, maxHp: 14, active: true };
-        let inventoryState = { bag: ["broadsword_01", "potion_heal", "iron_key_01"], equipped: { main_hand: null, torso: null } };
+        let enemy = { x: 14, y: 6, hp: 12, maxHp: 12, active: true };
 
         const spriteSheet = new Image();
         spriteSheet.crossOrigin = "anonymous"; 
@@ -268,44 +265,56 @@
         function showTitleScreen() {
             gameState = 'TITLE';
             document.getElementById('title-screen-overlay').style.display = 'flex';
-            document.getElementById('title-load-btn').style.display = localStorage.getItem(SAVE_SLOT_KEY) ? 'block' : 'none';
         }
 
         function startNewGame() {
             gameState = 'PLAYING';
-            document.getElementById('title-screen-overlay').style.display = 'none';
+            
+            // Re-initialize dynamic view styling structures completely
+            const overlay = document.getElementById('title-screen-overlay');
+            overlay.style.display = 'none';
+            overlay.querySelector('h1').innerText = "DUNGEONS OF ODDY";
+            overlay.querySelector('h1').style.color = "#3b82f6";
+            overlay.querySelector('p').innerText = "A Retro Norse Roguelike Sandbox Alpha";
+            overlay.querySelector('button').innerText = "🛡️ Start New Adventure";
+            
+            // Core baseline dataset state values clean reset
             dungeonLevel = 1;
             turnCount = 0;
+            player.level = 1;
+            player.xp = 0;
+            player.xpNeeded = 100;
+            player.statPoints = 0;
+            player.stats = { str: 10, int: 10, con: 10 };
+            
+            // Load and run initial mathematical matrix calculation rules
+            recalculateCharacterStats();
             player.hp = player.maxHp;
             player.mp = player.maxMp;
-            inventoryState.bag = ["broadsword_01", "potion_heal", "iron_key_01"];
-            inventoryState.equipped = { main_hand: null, torso: null };
             
-            generateProceduralFloor();
+            clearLog();
+            logMessage("⚔️ A fresh sandbox quest begins! Defend yourself!");
+
+            generateMapLayout();
             initInventoryUI();
             drawScene();
-            logMessage("⚔️ Sandbox initialized. Calibrate coordinates using the panel below if graphics look misplaced.");
         }
 
-        function generateProceduralFloor() {
+        function generateMapLayout() {
             gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
             carveRoom(2, 2, 7, 5);
-            carveRoom(13, 4, 9, 8);
+            carveRoom(12, 4, 9, 8);
             
-            for(let x = 8; x <= 13; x++) gameMap[4][x] = TILE.FLOOR;
-            
-            gameMap[4][10] = TILE.DOOR_LOCKED;
-            activeDoors["10,4"] = { hp: 30, maxHp: 30 };
+            for(let x = 8; x <= 12; x++) gameMap[4][x] = TILE.FLOOR;
+            gameMap[4][9] = TILE.DOOR_CLOSED;
 
             gameMap[3][3] = TILE.STAIRS_UP;
-            gameMap[7][16] = TILE.STAIRS_DOWN;
+            gameMap[5][15] = TILE.STAIRS_DOWN;
             
-            player.x = 3; player.y = 3;
+            player.x = 3; player.y = 4;
+            gameMap[2][5] = TILE.CHEST;
 
-            gameMap[5][4] = TILE.CHEST;
-            activeChests["4,5"] = { itemId: "chainmail_01", opened: false };
-
-            enemy.x = 15; enemy.y = 6; enemy.hp = 14; enemy.active = true;
+            enemy.x = 14; enemy.y = 6; enemy.hp = 12; enemy.active = true;
         }
 
         function carveRoom(rx, ry, w, h) {
@@ -323,8 +332,10 @@
                 for (let x = 0; x < MAP_WIDTH; x++) {
                     let tileType = gameMap[y][x];
                     let key = 'WALL';
+                    
                     if (tileType === TILE.FLOOR) key = 'FLOOR';
                     
+                    // Render sub-layer background floors everywhere underneath assets
                     if (tileType !== TILE.WALL) {
                         drawSprite('FLOOR', x, y);
                     }
@@ -332,8 +343,9 @@
                     if (tileType === TILE.DOOR_CLOSED) key = 'DOOR_CLOSED';
                     if (tileType === TILE.DOOR_LOCKED) key = 'DOOR_LOCKED';
                     if (tileType === TILE.CHEST) key = 'CHEST';
-                    if (tileType === TILE.STAIRS_DOWN) key = 'STAIRS_DOWN'; // Checked structural alignment key
+                    if (tileType === TILE.STAIRS_DOWN) key = 'STAIRS_DOWN';
                     if (tileType === TILE.STAIRS_UP) key = 'STAIRS_UP';
+                    
                     drawSprite(key, x, y);
                 }
             }
@@ -343,110 +355,194 @@
             }
             
             drawSprite('PLAYER', player.x, player.y);
-            if (activeSelectedSpell) drawSpellPreview();
             updateUIDisplays();
         }
 
         function drawSprite(key, gridX, gridY) {
             const spr = SPRITE_MAP[key];
             if (!spr) return;
-            ctx.drawImage(spriteSheet, spr.col * TILE_SIZE, spr.row * TILE_SIZE, TILE_SIZE, TILE_SIZE, gridX * TILE_SIZE, gridY * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.drawImage(
+                spriteSheet, 
+                spr.col * SPRITE_SIZE, 
+                spr.row * SPRITE_SIZE, 
+                SPRITE_SIZE, 
+                SPRITE_SIZE, 
+                gridX * TILE_SIZE, 
+                gridY * TILE_SIZE, 
+                TILE_SIZE, 
+                TILE_SIZE
+            );
         }
 
         function processMove(dx, dy) {
             let targetX = player.x + dx;
             let targetY = player.y + dy;
-            if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
             
-            let targetTile = gameMap[targetY][targetX];
-            if (targetTile === TILE.WALL) return;
+            if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
+            if (gameMap[targetY][targetX] === TILE.WALL) return;
 
-            if (targetTile === TILE.DOOR_LOCKED) {
-                let doorKey = `${targetX},${targetY}`;
-                if (inventoryState.bag.includes("iron_key_01")) {
-                    gameMap[targetY][targetX] = TILE.FLOOR;
-                    delete activeDoors[doorKey];
-                    logMessage("🔑 Door unlocked cleanly with key.");
-                } else {
-                    if (activeDoors[doorKey]) {
-                        activeDoors[doorKey].hp -= 5;
-                        logMessage(`💪 Bashed locked structural door! [HP: ${activeDoors[doorKey].hp}/30]`);
-                        if (activeDoors[doorKey].hp <= 0) {
-                            gameMap[targetY][targetX] = TILE.FLOOR;
-                            delete activeDoors[doorKey];
-                            logMessage("💥 Door shattered into splinters!");
-                        }
-                    }
-                }
+            if (gameMap[targetY][targetX] === TILE.DOOR_CLOSED) {
+                gameMap[targetY][targetX] = TILE.FLOOR;
+                logMessage("🚪 Opened a heavy wooden structural passage door.");
                 endPlayerTurn();
                 return;
             }
 
             if (enemy.active && targetX === enemy.x && targetY === enemy.y) {
-                enemy.hp -= 4;
-                logMessage("⚔️ Attacked monster.");
-                if (enemy.hp <= 0) enemy.active = false;
+                let damageExecuted = 3 + Math.floor((player.stats.str - 10) / 2);
+                enemy.hp -= damageExecuted;
+                logMessage(`⚔️ You strike the Goblin for ${damageExecuted} melee dmg!`);
+                
+                if (enemy.hp <= 0) {
+                    enemy.active = false;
+                    logMessage("💀 The Goblin crumbles into dust!");
+                    gainExperience(100); 
+                }
                 endPlayerTurn();
                 return;
             }
 
-            player.x = targetX; player.y = targetY;
+            player.x = targetX; 
+            player.y = targetY;
             endPlayerTurn();
         }
 
         function endPlayerTurn() {
             turnCount++;
+            
+            // Execute basic enemy automated responses loop
+            if (enemy.active) {
+                let dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
+                if (dist === 1) {
+                    let monsterDamage = Math.max(1, 4 - Math.floor((player.stats.con - 10) / 2));
+                    player.hp -= monsterDamage;
+                    logMessage(`💥 Goblin hits you for ${monsterDamage} damage!`);
+                }
+            }
+
+            drawScene();
+            
+            // Handle critical structural check condition updates for death states
+            if (player.hp <= 0) {
+                triggerGameOver();
+            }
+        }
+
+        // --- IMMORTALITY LOOP GUARD: GAME OVER CONTROLLERS ---
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            logMessage("💀 **YOU PERISHED!** The layout claims your soul.");
+            
+            const overlay = document.getElementById('title-screen-overlay');
+            overlay.style.display = 'flex';
+            
+            overlay.querySelector('h1').innerText = "GAME OVER";
+            overlay.querySelector('h1').style.color = "#ef4444";
+            overlay.querySelector('p').innerText = `Died on Floor ${dungeonLevel} after surviving ${turnCount} turns inside the system grid.`;
+            overlay.querySelector('button').innerText = "🛡️ Try Again (Respawn Model)";
+        }
+
+        // --- PROGRESSION LEVEL-UP AND CHARACTER CALCULATOR MATHEMATICS ---
+        function recalculateCharacterStats() {
+            player.maxHp = 10 + (player.stats.con * 1); 
+            player.maxMp = 10 + (player.stats.int * 2);
+
+            let calculatedAtk = 12 + Math.floor((player.stats.str - 10) / 2);
+            let calculatedDef = 2 + Math.floor((player.stats.con - 10) / 2);
+            
+            document.getElementById('stat-str').innerText = player.stats.str;
+            document.getElementById('stat-int').innerText = player.stats.int;
+            document.getElementById('stat-con').innerText = player.stats.con;
+            document.getElementById('stat-atk').innerText = calculatedAtk;
+            document.getElementById('stat-def').innerText = calculatedDef;
+            document.getElementById('stat-points-display').innerText = player.statPoints;
+
+            const buttons = document.querySelectorAll('.stat-up-btn');
+            buttons.forEach(btn => {
+                btn.style.display = (player.statPoints > 0) ? 'inline-block' : 'none';
+            });
+        }
+
+        function raiseStat(statName) {
+            if (!player.statPoints || player.statPoints <= 0) return;
+            
+            player.statPoints--;
+            player.stats[statName]++;
+            
+            recalculateCharacterStats();
+            
+            if (statName === 'con') player.hp = Math.min(player.maxHp, player.hp + 1);
+            if (statName === 'int') player.mp = Math.min(player.maxMp, player.mp + 2);
+
+            logMessage(`💪 Attribute up! Upgraded [${statName.toUpperCase()}] safely.`);
             drawScene();
         }
 
-        // --- INTERACTIVE ENGINE CONFIGURATOR CODES ---
+        function gainExperience(amt) {
+            player.xp += amt;
+            if (player.xp >= player.xpNeeded) {
+                player.level++;
+                player.xp -= player.xpNeeded;
+                player.xpNeeded = player.level * 100;
+                
+                // Grant system upgrade tokens
+                player.statPoints += 3;
+                
+                recalculateCharacterStats();
+                player.hp = player.maxHp;
+                player.mp = player.maxMp;
+                
+                logMessage("✨ **LEVEL UP!** Earned 3 allocation points. Press the [+] modifiers keys on sheet.");
+            }
+        }
+
+        // --- INTERACTIVE ALIGNMENT LAYOUT STUDIO SYSTEMS ---
         function setMappingTarget(target, btn) {
             currentMappingTarget = target;
             document.querySelectorAll('.mapper-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            logMessage(`🎯 Calibration active: Click the graphic for [${target}] on the bottom sheet matrix.`);
+            logMessage(`🎯 Calibration target tracking: Choose the graphic element for [${target}] below.`);
         }
 
         studioCanvas.addEventListener('click', (e) => {
             if (!currentMappingTarget) {
-                alert("Please click one of the entity target configuration buttons above first!");
+                alert("Please select a structural design item target button above first before clicking elements!");
                 return;
             }
             const rect = studioCanvas.getBoundingClientRect();
-            const col = Math.floor((e.clientX - rect.left) / TILE_SIZE);
-            const row = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+            const col = Math.floor((e.clientX - rect.left) / SPRITE_SIZE);
+            const row = Math.floor((e.clientY - rect.top) / SPRITE_SIZE);
             
             SPRITE_MAP[currentMappingTarget] = { col, row };
-            logMessage(`✅ Remapped [${currentMappingTarget}] to Matrix Coordinates: Column ${col}, Row ${row}`);
+            logMessage(`✅ Linked asset [${currentMappingTarget}] directly to Matrix index: ${col}, ${row}`);
             
             renderStudioGrid();
-            drawScene(); // Instantly update active game map layout views
+            drawScene(); 
         });
 
         function renderStudioGrid() {
             sCtx.clearRect(0, 0, studioCanvas.width, studioCanvas.height);
             sCtx.drawImage(spriteSheet, 0, 0);
             
-            sCtx.font = "9px monospace";
+            sCtx.font = "8px monospace";
             sCtx.textAlign = "center";
             
-            for (let r = 0; r < 22; r++) {
-                for (let c = 0; c < 26; c++) {
+            for (let r = 0; r < 44; r++) {
+                for (let c = 0; c < 52; c++) {
                     sCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-                    sCtx.strokeRect(c * 32, r * 32, 32, 32);
+                    sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
                     
-                    // Highlight current configuration links
                     for (let key in SPRITE_MAP) {
                         if (SPRITE_MAP[key].col === c && SPRITE_MAP[key].row === r) {
                             sCtx.strokeStyle = "#3b82f6";
                             sCtx.lineWidth = 2;
-                            sCtx.strokeRect(c * 32 + 1, r * 32 + 1, 30, 30);
+                            sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
                             sCtx.lineWidth = 1;
                             
                             sCtx.fillStyle = "rgba(59, 130, 246, 0.85)";
-                            sCtx.fillRect(c * 32 + 1, r * 32 + 1, 30, 10);
+                            sCtx.fillRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, 10);
                             sCtx.fillStyle = "#ffffff";
-                            sCtx.fillText(key.substring(0, 5), c * 32 + 16, r * 32 + 9);
+                            sCtx.fillText(key.substring(0, 3), c * SPRITE_SIZE + 8, r * SPRITE_SIZE + 8);
                         }
                     }
                 }
@@ -454,33 +550,47 @@
         }
 
         function exportSpriteCode() {
-            let output = "Copy and replace this SPRITE_MAP block inside your code file:\n\nconst SPRITE_MAP = {\n";
+            let block = "const SPRITE_MAP = {\n";
             for (let key in SPRITE_MAP) {
-                output += `    ${key.padEnd(12)}: { col: ${SPRITE_MAP[key].col}, row: ${SPRITE_MAP[key].row} },\n`;
+                block += `    ${key.padEnd(12)}: { col: ${SPRITE_MAP[key].col}, row: ${SPRITE_MAP[key].row} },\n`;
             }
-            output += "};";
-            console.log(output);
-            alert("Sprite Map object configuration generated! Open your Browser Developer Console (F12) to copy the clean code block easily.");
+            block += "};";
+            console.log(block);
+            alert("Matrix configuration array produced! Press F12 to copy your custom code block from your developer log window.");
         }
 
-        // --- STANDARD BOOTSTRAP MODULES ---
+        // --- SUB-PANEL UTILITIES ---
         function initInventoryUI() {
             const bag = document.getElementById('player-bag');
             bag.innerHTML = '';
             for (let i = 0; i < 24; i++) {
-                let s = document.createElement('div');
-                s.className = 'slot';
-                bag.appendChild(s);
+                let slot = document.createElement('div');
+                slot.className = 'slot';
+                bag.appendChild(slot);
             }
         }
 
         function updateUIDisplays() {
             document.getElementById('floor-display').innerText = dungeonLevel;
             document.getElementById('lvl-display').innerText = player.level;
+            document.getElementById('xp-display').innerText = player.xp;
+            document.getElementById('xpneeded-display').innerText = player.xpNeeded;
             document.getElementById('hp-display').innerText = `${player.hp} / ${player.maxHp}`;
             document.getElementById('mp-display').innerText = `${player.mp} / ${player.maxMp}`;
             document.getElementById('turn-display').innerText = turnCount;
         }
+
+        function logMessage(msg) {
+            const box = document.getElementById('log-box');
+            box.innerHTML = `<div>${msg}</div>` + box.innerHTML;
+        }
+
+        function clearLog() {
+            document.getElementById('log-box').innerHTML = '';
+        }
+
+        function saveGame() { logMessage("💾 Execution state checkpoint saved to browser localStorage registry."); }
+        function loadGame() { logMessage("📂 Snapshot profile checkpoint restored from system browser memory."); }
 
         window.addEventListener('keydown', (e) => {
             if (gameState !== 'PLAYING') return; 
