@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine</title>
+    <title>Dungeon Engine - Full Custom Sprites</title>
     <style>
         body {
             background-color: #1e1e2f;
@@ -74,18 +74,21 @@
 
         <div class="panel">
             <h3>Alignment Studio</h3>
-            <img id="sourceImage" src="image_9ef1c2.jpg" style="display:none;" alt="Sprite Sheet">
-            <canvas id="studioCanvas" width="416" height="352"></canvas>
+            <canvas id="studioCanvas" width="256" height="192"></canvas>
             
             <div class="controls" id="mapper-controls">
-                <button onclick="setTarget('WALL', this)">Map Wall</button>
-                <button onclick="setTarget('WALL_TORCH', this)">🔥 Map Torch Wall</button>
-                <button onclick="setTarget('WALL_MOSS', this)">🌿 Map Mossy Wall</button>
-                <button onclick="setTarget('FLOOR', this)">Map Floor</button>
-                <button onclick="setTarget('FLOOR_CRACKED', this)">🕸️ Map Cracked Floor</button>
-                <button onclick="setTarget('PLAYER', this)">Map Player</button>
-                <button onclick="setTarget('GOBLIN', this)">Map Goblin</button>
-                <button onclick="setTarget('CHEST', this)">Map Chest</button>
+                <button onclick="setTarget('WALL', this)">Wall</button>
+                <button onclick="setTarget('FLOOR', this)">Floor</button>
+                <button onclick="setTarget('DOOR_CLOSED', this)">Door (C)</button>
+                <button onclick="setTarget('DOOR_OPEN', this)">Door (O)</button>
+                <button onclick="setTarget('DOOR_BROKEN', this)">Door (B)</button>
+                <button onclick="setTarget('STAIRS_UP', this)">Stairs Up</button>
+                <button onclick="setTarget('STAIRS_DOWN', this)">Stairs Dn</button>
+                <button onclick="setTarget('CHEST_CLOSED', this)">Chest (C)</button>
+                <button onclick="setTarget('CHEST_OPEN', this)">Chest (O)</button>
+                <button onclick="setTarget('HERO', this)">Hero</button>
+                <button onclick="setTarget('GOBLIN', this)">Goblin</button>
+                <button onclick="setTarget('BAT', this)">Bat</button>
             </div>
             <div id="log">Awaiting input...</div>
         </div>
@@ -93,73 +96,175 @@
 
 <script>
 // --- 1. CONSTANTS & DICTIONARIES ---
-const SHEET_GRID = 16;   // Physical size of a square on the source image
-const GAME_TILE = 32;    // The rendered size in the game window
+const SHEET_GRID = 32;   // Everything is uniformly 32x32 now!
+const GAME_TILE = 32;    
 const MAP_WIDTH = 25;
 const MAP_HEIGHT = 18;
 
+// Map tile definitions
 const TILE = { 
     WALL: 0, FLOOR: 1, 
-    WALL_TORCH: 2, WALL_MOSS: 3, FLOOR_CRACKED: 4 
+    DOOR_CLOSED: 2, DOOR_OPEN: 3, DOOR_BROKEN: 4,
+    STAIRS_UP: 5, STAIRS_DOWN: 6
 };
 
-// Default mapping (w and h dictate how many 16px squares the sprite uses)
+// Auto-mapped dictionary to our new 4x3 generator grid
 let SPRITE_MAP = {
-    WALL:          { col: 0, row: 0, w: 1, h: 1 }, 
-    WALL_TORCH:    { col: 0, row: 0, w: 1, h: 1 }, 
-    WALL_MOSS:     { col: 0, row: 0, w: 1, h: 1 }, 
-    FLOOR:         { col: 1, row: 0, w: 1, h: 1 }, 
-    FLOOR_CRACKED: { col: 1, row: 0, w: 1, h: 1 }, 
-    PLAYER:        { col: 0, row: 1, w: 2, h: 2 }, 
-    GOBLIN:        { col: 2, row: 1, w: 2, h: 2 },
-    CHEST:         { col: 4, row: 1, w: 2, h: 2 }
+    WALL:         { col: 0, row: 0, w: 1, h: 1 }, 
+    FLOOR:        { col: 1, row: 0, w: 1, h: 1 }, 
+    STAIRS_UP:    { col: 2, row: 0, w: 1, h: 1 },
+    STAIRS_DOWN:  { col: 3, row: 0, w: 1, h: 1 },
+    DOOR_CLOSED:  { col: 0, row: 1, w: 1, h: 1 },
+    DOOR_OPEN:    { col: 1, row: 1, w: 1, h: 1 },
+    DOOR_BROKEN:  { col: 2, row: 1, w: 1, h: 1 },
+    CHEST_CLOSED: { col: 3, row: 1, w: 1, h: 1 },
+    CHEST_OPEN:   { col: 0, row: 2, w: 1, h: 1 },
+    HERO:         { col: 1, row: 2, w: 1, h: 1 }, 
+    GOBLIN:       { col: 2, row: 2, w: 1, h: 1 },
+    BAT:          { col: 3, row: 2, w: 1, h: 1 }
 };
 
+// GAME STATE
 let gameMap = [];
+let playerPos = { x: 12, y: 12 }; 
+
+// STUDIO STATE
 let currentMappingTarget = null;
 let activeBtn = null;
 
 // --- 2. CANVAS SETUP ---
 const gCanvas = document.getElementById('gameCanvas');
 const gCtx = gCanvas.getContext('2d');
-
 const sCanvas = document.getElementById('studioCanvas');
 const sCtx = sCanvas.getContext('2d');
 
-const spriteSheet = document.getElementById('sourceImage');
+// --- 3. PROCEDURAL SPRITE SHEET GENERATOR ---
+const spriteSheet = new Image();
 
-// --- 3. INITIALIZATION ---
+function drawTile(ctx, col, row, drawFunction) {
+    ctx.save();
+    ctx.translate(col * 32, row * 32);
+    drawFunction(ctx);
+    ctx.restore();
+}
+
+function generateInternalSpriteSheet() {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 128; // 4 columns * 32px
+    tempCanvas.height = 96; // 3 rows * 32px
+    const ctx = tempCanvas.getContext('2d');
+
+    // ROW 0: Environment
+    drawTile(ctx, 0, 0, c => { // WALL
+        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32);
+        c.fillStyle = '#1f2937'; c.fillRect(0, 14, 32, 2);
+        c.fillRect(14, 0, 2, 14); c.fillRect(24, 16, 2, 16);
+    });
+    drawTile(ctx, 1, 0, c => { // FLOOR
+        c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32);
+        c.fillStyle = '#27272a'; c.fillRect(4, 4, 8, 8); c.fillRect(20, 18, 6, 6);
+    });
+    drawTile(ctx, 2, 0, c => { // STAIRS UP
+        c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32);
+        c.fillStyle = '#9ca3af'; c.fillRect(4, 16, 12, 16); c.fillRect(16, 4, 12, 28);
+    });
+    drawTile(ctx, 3, 0, c => { // STAIRS DOWN
+        c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32);
+        c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 24);
+        c.fillStyle = '#4b5563'; c.fillRect(4, 4, 12, 8); c.fillRect(8, 12, 12, 8);
+    });
+
+    // ROW 1: Doors & Chest Closed
+    drawTile(ctx, 0, 1, c => { // DOOR CLOSED
+        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); // wall frame
+        c.fillStyle = '#78350f'; c.fillRect(4, 4, 24, 28); // wood door
+        c.fillStyle = '#fbbf24'; c.fillRect(22, 16, 4, 4); // knob
+    });
+    drawTile(ctx, 1, 1, c => { // DOOR OPEN
+        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); // wall frame
+        c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); // dark opening
+        c.fillStyle = '#78350f'; c.fillRect(0, 4, 6, 28); // swung open door
+    });
+    drawTile(ctx, 2, 1, c => { // DOOR BROKEN
+        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); // wall frame
+        c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); // dark opening
+        c.fillStyle = '#78350f'; 
+        c.fillRect(4, 4, 6, 12); c.fillRect(20, 20, 8, 12); // splinters
+        c.fillRect(18, 4, 10, 6);
+    });
+    drawTile(ctx, 3, 1, c => { // CHEST CLOSED
+        c.fillStyle = '#b45309'; c.fillRect(4, 12, 24, 16); // box
+        c.fillStyle = '#d97706'; c.fillRect(4, 12, 24, 4); // lid
+        c.fillStyle = '#fbbf24'; c.fillRect(14, 14, 4, 6); // lock
+    });
+
+    // ROW 2: Chest Open & Entities
+    drawTile(ctx, 0, 2, c => { // CHEST OPEN
+        c.fillStyle = '#b45309'; c.fillRect(4, 16, 24, 12); // box
+        c.fillStyle = '#d97706'; c.fillRect(4, 4, 24, 4); // open lid
+        c.fillStyle = '#fbbf24'; c.fillRect(8, 12, 16, 4); // gold inside
+        c.fillStyle = '#60a5fa'; c.fillRect(12, 10, 4, 4); // gem
+    });
+    drawTile(ctx, 1, 2, c => { // HERO
+        c.fillStyle = '#2563eb'; c.fillRect(8, 8, 16, 20); // body
+        c.fillStyle = '#fca5a5'; c.fillRect(10, 10, 12, 8); // face
+        c.fillStyle = '#94a3b8'; c.fillRect(24, 12, 4, 12); // sword
+    });
+    drawTile(ctx, 2, 2, c => { // GOBLIN
+        c.fillStyle = '#16a34a'; c.fillRect(8, 12, 16, 16); // body
+        c.fillStyle = '#ef4444'; c.fillRect(10, 14, 4, 4); c.fillRect(18, 14, 4, 4); // eyes
+        c.fillStyle = '#78350f'; c.fillRect(4, 10, 4, 16); // club
+    });
+    drawTile(ctx, 3, 2, c => { // BAT
+        c.fillStyle = '#581c87'; c.fillRect(12, 12, 8, 8); // body
+        c.fillStyle = '#000000'; 
+        c.beginPath(); c.moveTo(12,14); c.lineTo(2,8); c.lineTo(6,18); c.fill(); // left wing
+        c.beginPath(); c.moveTo(20,14); c.lineTo(30,8); c.lineTo(26,18); c.fill(); // right wing
+        c.fillStyle = '#ef4444'; c.fillRect(14, 14, 2, 2); c.fillRect(18, 14, 2, 2); // eyes
+    });
+
+    spriteSheet.src = tempCanvas.toDataURL("image/png");
+}
+
+// --- 4. INITIALIZATION ---
 spriteSheet.onload = () => {
-    // Crucial for pixel art: Disable blurring
     gCtx.imageSmoothingEnabled = false;
     sCtx.imageSmoothingEnabled = false;
-
-    // Use naturalWidth to fix hidden image bug
-    if (spriteSheet.naturalWidth > 0) {
-        sCanvas.width = spriteSheet.naturalWidth;
-        sCanvas.height = spriteSheet.naturalHeight;
-    } else {
-        sCanvas.width = 416;
-        sCanvas.height = 352;
-    }
-
     generateMap();
     renderStudioGrid();
     drawScene();
 };
 
-if (spriteSheet.complete) spriteSheet.onload();
+generateInternalSpriteSheet();
 
-// Utility function for random numbers
-function randInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+// --- 5. CORE GAMEPLAY LOGIC ---
 
-// --- 4. ENGINE FUNCTIONS ---
+// Listen for keyboard input to move the player
+window.addEventListener('keydown', (e) => {
+    let targetX = playerPos.x;
+    let targetY = playerPos.y;
+
+    if (e.key === 'ArrowUp' || e.key === 'w') targetY--;
+    if (e.key === 'ArrowDown' || e.key === 's') targetY++;
+    if (e.key === 'ArrowLeft' || e.key === 'a') targetX--;
+    if (e.key === 'ArrowRight' || e.key === 'd') targetX++;
+
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault();
+    }
+
+    // Collision Detection: Only move if the target tile is NOT a wall and NOT a closed door
+    let targetTile = gameMap[targetY] ? gameMap[targetY][targetX] : null;
+    
+    if (targetTile !== null && targetTile !== TILE.WALL && targetTile !== TILE.DOOR_CLOSED) {
+        playerPos.x = targetX;
+        playerPos.y = targetY;
+        drawScene(); 
+    }
+});
+
 function generateMap() {
     gameMap = [];
-    
-    // Basic Walled Room
     for (let y = 0; y < MAP_HEIGHT; y++) {
         let row = [];
         for (let x = 0; x < MAP_WIDTH; x++) {
@@ -172,46 +277,27 @@ function generateMap() {
         gameMap.push(row);
     }
 
-    // --- DECORATOR PASS ---
-    for (let y = 1; y < MAP_HEIGHT - 1; y++) {
-        for (let x = 1; x < MAP_WIDTH - 1; x++) {
-            
-            // Decorate Inner Walls (pretend we added internal walls)
-            if (gameMap[y][x] === TILE.WALL) {
-                let rand = randInt(1, 100);
-                if (rand <= 10) gameMap[y][x] = TILE.WALL_TORCH;
-                else if (rand <= 25) gameMap[y][x] = TILE.WALL_MOSS;
-            }
-            
-            // Decorate Top Perimeter Walls
-            if (y === 0 && gameMap[y][x] === TILE.WALL) {
-                let rand = randInt(1, 100);
-                if (rand <= 15) gameMap[y][x] = TILE.WALL_TORCH;
-            }
-            
-            // Decorate Floors
-            if (gameMap[y][x] === TILE.FLOOR) {
-                let rand = randInt(1, 100);
-                if (rand <= 8) gameMap[y][x] = TILE.FLOOR_CRACKED; 
-            }
-        }
-    }
+    // Sprinkle some features into the room so we can look at them!
+    gameMap[2][2] = TILE.STAIRS_UP;
+    gameMap[15][22] = TILE.STAIRS_DOWN;
+
+    // Create a little interior wall with doors
+    for (let i = 4; i < 12; i++) gameMap[6][i] = TILE.WALL;
+    gameMap[6][6] = TILE.DOOR_CLOSED;
+    gameMap[6][9] = TILE.DOOR_BROKEN;
 }
 
-// The core rendering logic
+// --- 6. RENDERING ENGINE ---
 function drawSprite(key, gridX, gridY) {
     const spr = SPRITE_MAP[key];
     if (!spr) return;
-    
-    const sourceWidth = spr.w * SHEET_GRID;
-    const sourceHeight = spr.h * SHEET_GRID;
     
     gCtx.drawImage(
         spriteSheet, 
         spr.col * SHEET_GRID, 
         spr.row * SHEET_GRID, 
-        sourceWidth,          
-        sourceHeight,         
+        SHEET_GRID,          
+        SHEET_GRID,         
         gridX * GAME_TILE,    
         gridY * GAME_TILE,    
         GAME_TILE,            
@@ -222,31 +308,34 @@ function drawSprite(key, gridX, gridY) {
 function drawScene() {
     gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 
-    // Draw the map
+    // 1. Draw Map Layer
     for (let y = 0; y < MAP_HEIGHT; y++) {
         for (let x = 0; x < MAP_WIDTH; x++) {
-            let tileType = gameMap[y][x];
+            let t = gameMap[y][x];
             
-            // Draw floor under variants to avoid black transparency gaps
-            if (tileType !== TILE.WALL && tileType !== TILE.WALL_TORCH && tileType !== TILE.WALL_MOSS) {
-                drawSprite('FLOOR', x, y);
-            }
+            // Always draw a floor first so transparent items have a background
+            if (t !== TILE.WALL) drawSprite('FLOOR', x, y);
             
-            if (tileType === TILE.FLOOR) drawSprite('FLOOR', x, y);
-            if (tileType === TILE.FLOOR_CRACKED) drawSprite('FLOOR_CRACKED', x, y);
-            if (tileType === TILE.WALL) drawSprite('WALL', x, y);
-            if (tileType === TILE.WALL_TORCH) drawSprite('WALL_TORCH', x, y);
-            if (tileType === TILE.WALL_MOSS) drawSprite('WALL_MOSS', x, y);
+            if (t === TILE.WALL) drawSprite('WALL', x, y);
+            if (t === TILE.STAIRS_UP) drawSprite('STAIRS_UP', x, y);
+            if (t === TILE.STAIRS_DOWN) drawSprite('STAIRS_DOWN', x, y);
+            if (t === TILE.DOOR_CLOSED) drawSprite('DOOR_CLOSED', x, y);
+            if (t === TILE.DOOR_OPEN) drawSprite('DOOR_OPEN', x, y);
+            if (t === TILE.DOOR_BROKEN) drawSprite('DOOR_BROKEN', x, y);
         }
     }
 
-    // Draw dummy entities
-    drawSprite('CHEST', 12, 5);
+    // 2. Draw Entities Layer (Static for now)
+    drawSprite('CHEST_CLOSED', 5, 4);
+    drawSprite('CHEST_OPEN', 10, 4);
     drawSprite('GOBLIN', 15, 8);
-    drawSprite('PLAYER', 12, 9); 
+    drawSprite('BAT', 18, 5);
+    
+    // 3. Draw Player Layer 
+    drawSprite('HERO', playerPos.x, playerPos.y); 
 }
 
-// --- 5. ALIGNMENT STUDIO LOGIC ---
+// --- 7. ALIGNMENT STUDIO LOGIC ---
 function setTarget(key, btn) {
     currentMappingTarget = key;
     if (activeBtn) activeBtn.classList.remove('active');
@@ -256,20 +345,13 @@ function setTarget(key, btn) {
 }
 
 sCanvas.addEventListener('click', (e) => {
-    if (!currentMappingTarget) {
-        alert("Please select a target button first!");
-        return;
-    }
+    if (!currentMappingTarget) return;
     
     const rect = sCanvas.getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / SHEET_GRID);
-    const row = Math.floor((e.clientY - rect.top) / SHEET_GRID);
-    
-    // Safety check for existing width and height
-    const existingW = SPRITE_MAP[currentMappingTarget] ? SPRITE_MAP[currentMappingTarget].w : 1;
-    const existingH = SPRITE_MAP[currentMappingTarget] ? SPRITE_MAP[currentMappingTarget].h : 1;
+    const col = Math.floor(((e.clientX - rect.left) / 2) / SHEET_GRID);
+    const row = Math.floor(((e.clientY - rect.top) / 2) / SHEET_GRID);
 
-    SPRITE_MAP[currentMappingTarget] = { col, row, w: existingW, h: existingH };
+    SPRITE_MAP[currentMappingTarget] = { col, row, w: 1, h: 1 };
     document.getElementById('log').innerText = `✅ Mapped [${currentMappingTarget}] to Col: ${col}, Row: ${row}`;
     
     renderStudioGrid(); 
@@ -278,32 +360,32 @@ sCanvas.addEventListener('click', (e) => {
 
 function renderStudioGrid() {
     sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
-    sCtx.drawImage(spriteSheet, 0, 0);
+    // Draw scaled up 2x so it's easy to see and click
+    sCtx.imageSmoothingEnabled = false;
+    sCtx.drawImage(spriteSheet, 0, 0, 128 * 2, 96 * 2);
     
-    const cols = sCanvas.width / SHEET_GRID;
-    const rows = sCanvas.height / SHEET_GRID;
+    const cols = 4;
+    const rows = 3;
 
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-            sCtx.strokeRect(c * SHEET_GRID, r * SHEET_GRID, SHEET_GRID, SHEET_GRID);
+            sCtx.strokeRect(c * (SHEET_GRID*2), r * (SHEET_GRID*2), (SHEET_GRID*2), (SHEET_GRID*2));
             
             for (let key in SPRITE_MAP) {
                 let spr = SPRITE_MAP[key];
                 if (spr && spr.col === c && spr.row === r) {
-                    let w = (spr.w || 1) * SHEET_GRID;
-                    let h = (spr.h || 1) * SHEET_GRID;
-                    
                     sCtx.strokeStyle = "#3b82f6";
                     sCtx.lineWidth = 2;
-                    sCtx.strokeRect(c * SHEET_GRID, r * SHEET_GRID, w, h);
+                    sCtx.strokeRect(c * (SHEET_GRID*2), r * (SHEET_GRID*2), (SHEET_GRID*2), (SHEET_GRID*2));
                     
                     sCtx.lineWidth = 1;
                     sCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
-                    sCtx.fillRect(c * SHEET_GRID, r * SHEET_GRID, 18, 12);
+                    sCtx.fillRect(c * (SHEET_GRID*2), r * (SHEET_GRID*2), 24, 12);
                     sCtx.fillStyle = "#ffffff";
                     sCtx.font = "10px Arial";
-                    sCtx.fillText(key.substring(0, 3), c * SHEET_GRID + 2, r * SHEET_GRID + 10);
+                    // Just showing the first 3 letters so it fits nicely
+                    sCtx.fillText(key.substring(0, 3), c * (SHEET_GRID*2) + 2, r * (SHEET_GRID*2) + 10);
                 }
             }
         }
