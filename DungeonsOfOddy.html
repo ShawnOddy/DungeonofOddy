@@ -2,1355 +2,276 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dungeons of Oddy - Sandbox Beta Build</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Engine Sandbox</title>
     <style>
         body {
-            background-color: #0f172a;
-            color: #f8fafc;<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dungeons of Oddy - Sandbox Beta Build</title>
-    <style>
-        body {
-            background-color: #0f172a;
-            color: #f8fafc;
+            background-color: #1e1e2f;
+            color: #c8c8d0;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            padding: 30px 20px;
+            padding: 20px;
             margin: 0;
-            user-select: none;
-            overflow-y: auto;
         }
-        #game-container {
+
+        h1 { color: #ffffff; }
+
+        .container {
             display: flex;
             gap: 20px;
-            background-color: #1e293b;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px rgba(0,0,0,0.5);
+            flex-wrap: wrap;
+            justify-content: center;
         }
-        canvas {
-            border: 3px solid #475569;
-            background-color: #020617;
-            border-radius: 6px;
-        }
+
         .panel {
-            width: 320px;
-            background-color: #0f172a;
-            border: 2px solid #475569;
-            border-radius: 6px;
+            background-color: #2a2a3b;
             padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #3b3b4f;
+        }
+
+        /* Prevent the canvas from blurring when scaled by CSS */
+        canvas {
+            background-color: #000;
+            image-rendering: pixelated; 
+        }
+
+        /* Protect the studio canvas from getting crushed */
+        #studioCanvas {
+            flex-shrink: 0;
+            object-fit: contain;
+            cursor: crosshair;
+        }
+
+        .controls {
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            box-sizing: border-box;
-        }
-        h3, h4 { margin-top: 0; border-bottom: 2px solid #334155; padding-bottom: 5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;}
-        .stat-line { margin-bottom: 6px; font-size: 13px; font-weight: bold; }
-        
-        .equipment-slots {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .bag-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
             gap: 8px;
-            background-color: #1e293b;
-            padding: 8px;
-            border-radius: 6px;
-            min-height: 56px;
-        }
-        .slot {
-            background-color: #1e293b;
-            border: 2px dashed #475569;
-            border-radius: 4px;
-            height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .slot-label { position: absolute; bottom: 2px; color: #475569; font-size: 8px; text-transform: uppercase; font-weight: bold; }
-        
-        .log {
-            font-size: 11px;
-            color: #cbd5e1;
-            height: 120px;
-            overflow-y: auto;
-            border-top: 2px solid #334155;
-            padding-top: 8px;
             margin-top: 10px;
-            font-family: monospace;
-            line-height: 1.4;
         }
-        button {
-            color: white; border: none; border-radius: 4px; padding: 6px 12px;
-            font-weight: bold; font-size: 11px; cursor: pointer; transition: background 0.2s;
-        }
-        button:hover { filter: brightness(1.2); }
 
-        /* Configuration Layout Studio Styles */
-        #mapper-studio {
-            margin-top: 25px;
-            background-color: #1e293b;
-            border: 3px solid #3b82f6;
-            border-radius: 12px;
-            padding: 20px;
-            width: 1180px;
-            box-sizing: border-box;
-        }
-        .mapper-btn {
-            background-color: #475569;
-            padding: 8px 10px;
-            font-size: 11px;
-        }
-        .mapper-btn.active {
+        button {
             background-color: #3b82f6;
-            box-shadow: 0 0 10px rgba(59,130,246,0.6);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: #2563eb; }
+        button.active { background-color: #10b981; }
+
+        #log {
+            margin-top: 20px;
+            color: #10b981;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div style="position: relative; width: 800px; height: 576px;">
-            <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
-            
-            <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
-                <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);">DUNGEONS OF ODDY</h1>
-                <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Procedural Roguelike Sandbox Beta</p>
-                
-                <div style="display: flex; flex-direction: column; gap: 15px; width: 280px;">
-                    <button onclick="startNewGame()" style="background-color: #3b82f6; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px;">🛡️ Start New Adventure</button>
-                </div>
-            </div>
-        </div>
-        
+    <h1>Dungeon Engine</h1>
+
+    <div class="container">
         <div class="panel">
-            <div>
-                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                    <button onclick="saveGame()" style="background-color: #10b981; flex: 1;">Save Game</button>
-                    <button onclick="loadGame()" style="background-color: #6366f1; flex: 1;">Load Game</button>
-                </div>
-
-                <h3>Hero Snapshot</h3>
-                <div class="stat-line">Floor: <span id="floor-display" style="color: #3b82f6;">1</span></div>
-                <div class="stat-line">Level: <span id="lvl-display">1</span> (<span id="xp-display">0</span> / <span id="xpneeded-display">100</span> XP)</div>
-                <div class="stat-line">HP: <span id="hp-display" style="color: #ef4444;">20 / 20</span></div>
-                <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6;">30 / 30</span></div>
-                <div class="stat-line">Turns Ticked: <span id="turn-display">0</span></div>
-
-                <div id="stat-sheet" style="font-size: 11px; line-height: 1.8; background:#1e293b; padding:10px; border-radius:6px; margin: 12px 0; border: 1px solid #334155;">
-                    <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Unspent Attributes Pool: <span id="stat-points-display">0</span></div>
-                    
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <span>STR: <span id="stat-str" style="font-weight:bold; color:#f8fafc;">10</span></span>
-                        <button onclick="raiseStat('str')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <span>INT: <span id="stat-int" style="font-weight:bold; color:#f8fafc;">10</span></span>
-                        <button onclick="raiseStat('int')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span>CON: <span id="stat-con" style="font-weight:bold; color:#f8fafc;">10</span></span>
-                        <button onclick="raiseStat('con')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
-                    </div>
-                    
-                    <div style="border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px; color: #94a3b8;">
-                        ATK Pow: <span id="stat-atk" style="color: #f59e0b; font-weight:bold;">12</span> | DEF Rating: <span id="stat-def" style="color: #10b981; font-weight:bold;">2</span>
-                    </div>
-                </div>
-
-                <h4>Equipment Loadout</h4>
-                <div class="equipment-slots">
-                    <div class="slot" id="slot-main_hand"><span class="slot-label">Weapon</span></div>
-                    <div class="slot" id="slot-torso"><span class="slot-label">Armor</span></div>
-                </div>
-
-                <h4>Spellbook Action Keys</h4>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <button style="background-color: #1e3a8a; text-align: left;">✨ Magic Arrow (3 MP)</button>
-                    <button style="background-color: #7c2d12; text-align: left;">💥 Fireball (8 MP)</button>
-                </div>
-            </div>
-
-            <div>
-                <div id="log-box" class="log"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px; box-sizing: border-box;">
-        <h3 style="margin:0; border:none; white-space: nowrap;">Carrying Bag:</h3>
-        <div class="bag-grid" id="player-bag" style="flex-grow: 1;"></div>
-    </div>
-
-    <div id="mapper-studio">
-        <h3 style="color: #3b82f6; margin-bottom: 5px;">🔧 Interactive Sprite Sheet Alignment Studio</h3>
-        <p style="font-size: 12px; color: #94a3b8; margin-top: 0; margin-bottom: 15px;">
-            <strong>Note:</strong> The grid is now locked to the environment's true 16x16 size. When mapping large 32x32 characters or doors, click the <strong>top-left</strong> corner of their sprite!
-        </p>
-        
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;" id="mapper-controls">
-            <button class="mapper-btn" onclick="setMappingTarget('WALL', this)">🧱 Map Wall Tile</button>
-            <button class="mapper-btn" onclick="setMappingTarget('FLOOR', this)">🟩 Map Walkable Floor</button>
-            <button class="mapper-btn" onclick="setMappingTarget('DOOR_CLOSED', this)">🚪 Map Closed Door</button>
-            <button class="mapper-btn" onclick="setMappingTarget('DOOR_LOCKED', this)">🔒 Map Locked Door</button>
-            <button class="mapper-btn" onclick="setMappingTarget('CHEST', this)">📦 Map Treasure Chest</button>
-            <button class="mapper-btn" onclick="setMappingTarget('STAIRS_UP', this)">🔼 Map Stairs Up</button>
-            <button class="mapper-btn" onclick="setMappingTarget('STAIRS_DOWN', this)">🔽 Map Stairs Down</button>
-            <button class="mapper-btn" onclick="setMappingTarget('PLAYER', this)">🧙‍♂️ Map Player Hero</button>
-            <button class="mapper-btn" onclick="setMappingTarget('GOBLIN', this)">👹 Map Goblin Monster</button>
-            <button style="background-color: #10b981; margin-left: auto;" onclick="exportSpriteCode()">💾 Export My Custom Sprite Map</button>
+            <h3>Game View</h3>
+            <canvas id="gameCanvas" width="800" height="576"></canvas>
         </div>
 
-        <div style="position: relative; max-height: 400px; overflow: auto; border: 2px solid #475569; border-radius: 6px; background-color: #020617;">
-            <canvas id="studioCanvas" width="832" height="704" style="cursor: cell; border: none;"></canvas>
-        </div>
-    </div>
-
-    <script>
-        // --- CONSTANTS AND DICTIONARY SPECIFICATIONS ---
-        const SPRITE_SIZE = 16;  // The base environmental grid of the source image
-        const RENDER_SCALE = 2;  // Zooms the 16x16 game in by 2x to hit our 32x32 visuals
-        const TILE_SIZE = SPRITE_SIZE * RENDER_SCALE; // Grid is 32x32 visually
-        const MAP_WIDTH = 25;
-        const MAP_HEIGHT = 18;
-        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v6";
-
-        const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5, DOOR_LOCKED: 6 };
-
-        // Master alignment mapping calibrated dynamically for mixed resolutions. 
-        // W & H define how many 16px blocks the entity takes up!
-        let SPRITE_MAP = {
-            WALL:        { col: 8,  row: 2,  w: 1, h: 1 }, 
-            FLOOR:       { col: 24, row: 6,  w: 1, h: 1 }, 
-            DOOR_CLOSED: { col: 22, row: 1,  w: 2, h: 2 }, 
-            DOOR_LOCKED: { col: 24, row: 1,  w: 2, h: 2 }, 
-            CHEST:       { col: 36, row: 12, w: 2, h: 2 }, 
-            STAIRS_UP:   { col: 36, row: 4,  w: 2, h: 2 }, 
-            STAIRS_DOWN: { col: 36, row: 6,  w: 2, h: 2 }, 
-            PLAYER:      { col: 0,  row: 12, w: 2, h: 2 }, 
-            GOBLIN:      { col: 12, row: 12, w: 2, h: 2 }  
-        };
-
-        // --- ENGINE RUNTIME STATES ---
-        let gameState = 'TITLE';
-        let dungeonLevel = 1;
-        let turnCount = 0;
-        let gameMap = [];
-        let currentMappingTarget = null;
-
-        let player = {
-            x: 0, y: 0, hp: 20, maxHp: 20, mp: 30, maxMp: 30, level: 1, xp: 0, xpNeeded: 100,
-            statPoints: 0,
-            stats: { str: 10, int: 10, con: 10 }
-        };
-
-        let enemy = { x: 0, y: 0, hp: 12, maxHp: 12, active: false };
-
-        const spriteSheet = new Image();
-        spriteSheet.crossOrigin = "anonymous"; 
-        spriteSheet.src = 'spritesheet.png';
-
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const studioCanvas = document.getElementById('studioCanvas');
-        const sCtx = studioCanvas.getContext('2d');
-
-        function showTitleScreen() {
-            gameState = 'TITLE';
-            document.getElementById('title-screen-overlay').style.display = 'flex';
-        }
-
-        function startNewGame() {
-            gameState = 'PLAYING';
-            
-            const overlay = document.getElementById('title-screen-overlay');
-            overlay.style.display = 'none';
-            overlay.querySelector('h1').innerText = "DUNGEONS OF ODDY";
-            overlay.querySelector('h1').style.color = "#3b82f6";
-            overlay.querySelector('p').innerText = "A Procedural Roguelike Sandbox Beta";
-            overlay.querySelector('button').innerText = "🛡️ Start New Adventure";
-            
-            dungeonLevel = 1;
-            turnCount = 0;
-            player.level = 1;
-            player.xp = 0;
-            player.xpNeeded = 100;
-            player.statPoints = 0;
-            player.stats = { str: 10, int: 10, con: 10 };
-            
-            recalculateCharacterStats();
-            player.hp = player.maxHp;
-            player.mp = player.maxMp;
-            
-            clearLog();
-            logMessage("⚔️ A fresh procedural quest begins! Defend yourself!");
-
-            generateMapLayout();
-            initInventoryUI();
-            drawScene();
-        }
-
-        // --- BETA FEATURE: PROCEDURAL DUNGEON GENERATOR ---
-        function randInt(min, max) { 
-            return Math.floor(Math.random() * (max - min + 1)) + min; 
-        }
-
-        function generateMapLayout() {
-            gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
-            let rooms = [];
-            const MAX_ROOMS = 5;
-            const MIN_SIZE = 4;
-            const MAX_SIZE = 7;
-            enemy.active = false;
-
-            for (let i = 0; i < 30; i++) {
-                let w = randInt(MIN_SIZE, MAX_SIZE);
-                let h = randInt(MIN_SIZE, MAX_SIZE);
-                let x = randInt(1, MAP_WIDTH - w - 1);
-                let y = randInt(1, MAP_HEIGHT - h - 1);
-
-                let failed = false;
-                for (let room of rooms) {
-                    if (x < room.x + room.w + 1 && x + w + 1 > room.x &&
-                        y < room.y + room.h + 1 && y + h + 1 > room.y) {
-                        failed = true;
-                        break;
-                    }
-                }
-
-                if (!failed) {
-                    carveRoom(x, y, w, h);
-                    let center = { cx: Math.floor(x + w/2), cy: Math.floor(y + h/2) };
-                    
-                    if (rooms.length === 0) {
-                        player.x = center.cx;
-                        player.y = center.cy;
-                        gameMap[center.cy][center.cx] = TILE.STAIRS_UP;
-                    } else {
-                        let prevCenter = rooms[rooms.length - 1].center;
-                        carveCorridor(prevCenter.cx, prevCenter.cy, center.cx, center.cy);
-                        
-                        if (!enemy.active && randInt(1, 100) > 40) {
-                            enemy.active = true;
-                            enemy.x = center.cx;
-                            enemy.y = center.cy;
-                            enemy.maxHp = 10 + (dungeonLevel * 2); 
-                            enemy.hp = enemy.maxHp;
-                        }
-                        if (randInt(1, 100) > 70) {
-                            gameMap[center.cy][center.cx + 1] = TILE.CHEST;
-                        }
-                    }
-                    
-                    rooms.push({ x, y, w, h, center });
-                    if (rooms.length >= MAX_ROOMS) break;
-                }
-            }
-
-            let lastRoom = rooms[rooms.length - 1];
-            gameMap[lastRoom.center.cy][lastRoom.center.cx] = TILE.STAIRS_DOWN;
-        }
-
-        function carveRoom(rx, ry, w, h) {
-            for(let y = ry; y < ry+h; y++) {
-                for(let x = rx; x < rx+w; x++) {
-                    gameMap[y][x] = TILE.FLOOR;
-                }
-            }
-        }
-
-        function carveCorridor(x1, y1, x2, y2) {
-            let x = x1;
-            let y = y1;
-            while (x !== x2) {
-                gameMap[y][x] = TILE.FLOOR;
-                x += (x < x2) ? 1 : -1;
-            }
-            while (y !== y2) {
-                gameMap[y][x] = TILE.FLOOR;
-                y += (y < y2) ? 1 : -1;
-            }
-        }
-
-        function drawScene() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Layer 1: Base Environment
-            for (let y = 0; y < MAP_HEIGHT; y++) {
-                for (let x = 0; x < MAP_WIDTH; x++) {
-                    let tileType = gameMap[y][x];
-                    let key = 'WALL';
-                    if (tileType === TILE.FLOOR) key = 'FLOOR';
-                    
-                    // Always draw floor under entities
-                    if (tileType !== TILE.WALL) drawSprite('FLOOR', x, y);
-                    
-                    // Draw base layer structures
-                    if (tileType === TILE.WALL) drawSprite('WALL', x, y);
-                }
-            }
-            
-            // Layer 2: Props & Entities (drawn second so they correctly overlap walls behind them)
-            for (let y = 0; y < MAP_HEIGHT; y++) {
-                for (let x = 0; x < MAP_WIDTH; x++) {
-                    let tileType = gameMap[y][x];
-                    if (tileType === TILE.DOOR_CLOSED) drawSprite('DOOR_CLOSED', x, y);
-                    if (tileType === TILE.DOOR_LOCKED) drawSprite('DOOR_LOCKED', x, y);
-                    if (tileType === TILE.CHEST) drawSprite('CHEST', x, y);
-                    if (tileType === TILE.STAIRS_DOWN) drawSprite('STAIRS_DOWN', x, y);
-                    if (tileType === TILE.STAIRS_UP) drawSprite('STAIRS_UP', x, y);
-                }
-            }
-
-            if (enemy.active) drawSprite('GOBLIN', enemy.x, enemy.y);
-            drawSprite('PLAYER', player.x, player.y);
-            
-            updateUIDisplays();
-        }
-
-        // UPGRADED ENGINE RENDERER - Dynamically aligns oversized sprites
-        function drawSprite(key, gridX, gridY) {
-            const spr = SPRITE_MAP[key];
-            if (!spr) return;
-            
-            const w = spr.w || 1;
-            const h = spr.h || 1;
-            
-            // Convert source map size to rendered screen size
-            const pixelW = w * SPRITE_SIZE * RENDER_SCALE; 
-            const pixelH = h * SPRITE_SIZE * RENDER_SCALE;
-            
-            // This math dynamically centers oversized entities horizontally, 
-            // and aligns their "feet" to the bottom of the map tile they occupy!
-            const drawX = (gridX * TILE_SIZE) - ((pixelW - TILE_SIZE) / 2);
-            const drawY = (gridY * TILE_SIZE) - (pixelH - TILE_SIZE);
-
-            ctx.drawImage(
-                spriteSheet, 
-                spr.col * SPRITE_SIZE, 
-                spr.row * SPRITE_SIZE, 
-                w * SPRITE_SIZE, 
-                h * SPRITE_SIZE, 
-                drawX, 
-                drawY, 
-                pixelW, 
-                pixelH
-            );
-        }
-
-        function processMove(dx, dy) {
-            let targetX = player.x + dx;
-            let targetY = player.y + dy;
-            
-            if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
-            if (gameMap[targetY][targetX] === TILE.WALL) return;
-
-            if (gameMap[targetY][targetX] === TILE.DOOR_CLOSED) {
-                gameMap[targetY][targetX] = TILE.FLOOR;
-                logMessage("🚪 Opened a heavy wooden structural passage door.");
-                endPlayerTurn();
-                return;
-            }
-
-            if (gameMap[targetY][targetX] === TILE.STAIRS_DOWN) {
-                dungeonLevel++;
-                logMessage(`🧗 You descend deeper into the darkness of Floor ${dungeonLevel}...`);
-                
-                player.hp = Math.min(player.maxHp, player.hp + 5); 
-                generateMapLayout(); 
-                drawScene();
-                return;
-            }
-
-            if (enemy.active && targetX === enemy.x && targetY === enemy.y) {
-                let damageExecuted = 3 + Math.floor((player.stats.str - 10) / 2);
-                enemy.hp -= damageExecuted;
-                logMessage(`⚔️ You strike the Goblin for ${damageExecuted} melee dmg!`);
-                
-                if (enemy.hp <= 0) {
-                    enemy.active = false;
-                    logMessage("💀 The Goblin crumbles into dust!");
-                    gainExperience(100); 
-                }
-                endPlayerTurn();
-                return;
-            }
-
-            player.x = targetX; 
-            player.y = targetY;
-            endPlayerTurn();
-        }
-
-        function endPlayerTurn() {
-            turnCount++;
-            
-            if (enemy.active) {
-                let dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
-                if (dist === 1) {
-                    let monsterDamage = Math.max(1, 4 - Math.floor((player.stats.con - 10) / 2));
-                    player.hp -= monsterDamage;
-                    logMessage(`💥 Goblin hits you for ${monsterDamage} damage!`);
-                }
-            }
-
-            drawScene();
-            
-            if (player.hp <= 0) {
-                triggerGameOver();
-            }
-        }
-
-        function triggerGameOver() {
-            gameState = 'GAMEOVER';
-            logMessage("💀 **YOU PERISHED!** The dungeon claims your soul.");
-            
-            const overlay = document.getElementById('title-screen-overlay');
-            overlay.style.display = 'flex';
-            
-            overlay.querySelector('h1').innerText = "GAME OVER";
-            overlay.querySelector('h1').style.color = "#ef4444";
-            overlay.querySelector('p').innerText = `Died on Floor ${dungeonLevel} after surviving ${turnCount} turns.`;
-            overlay.querySelector('button').innerText = "🛡️ Try Again (Respawn)";
-        }
-
-        function recalculateCharacterStats() {
-            player.maxHp = 10 + (player.stats.con * 1); 
-            player.maxMp = 10 + (player.stats.int * 2);
-
-            let calculatedAtk = 12 + Math.floor((player.stats.str - 10) / 2);
-            let calculatedDef = 2 + Math.floor((player.stats.con - 10) / 2);
-            
-            document.getElementById('stat-str').innerText = player.stats.str;
-            document.getElementById('stat-int').innerText = player.stats.int;
-            document.getElementById('stat-con').innerText = player.stats.con;
-            document.getElementById('stat-atk').innerText = calculatedAtk;
-            document.getElementById('stat-def').innerText = calculatedDef;
-            document.getElementById('stat-points-display').innerText = player.statPoints;
-
-            const buttons = document.querySelectorAll('.stat-up-btn');
-            buttons.forEach(btn => {
-                btn.style.display = (player.statPoints > 0) ? 'inline-block' : 'none';
-            });
-        }
-
-        function raiseStat(statName) {
-            if (!player.statPoints || player.statPoints <= 0) return;
-            
-            player.statPoints--;
-            player.stats[statName]++;
-            
-            recalculateCharacterStats();
-            
-            if (statName === 'con') player.hp = Math.min(player.maxHp, player.hp + 1);
-            if (statName === 'int') player.mp = Math.min(player.maxMp, player.mp + 2);
-
-            logMessage(`💪 Attribute up! Upgraded [${statName.toUpperCase()}] safely.`);
-            drawScene();
-        }
-
-        function gainExperience(amt) {
-            player.xp += amt;
-            if (player.xp >= player.xpNeeded) {
-                player.level++;
-                player.xp -= player.xpNeeded;
-                player.xpNeeded = player.level * 100;
-                
-                player.statPoints += 3;
-                
-                recalculateCharacterStats();
-                player.hp = player.maxHp;
-                player.mp = player.maxMp;
-                
-                logMessage("✨ **LEVEL UP!** Earned 3 allocation points. Press the [+] modifiers keys on sheet.");
-            }
-        }
-
-        function setMappingTarget(target, btn) {
-            currentMappingTarget = target;
-            document.querySelectorAll('.mapper-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            logMessage(`🎯 Calibration target tracking: Choose the graphic element for [${target}] below.`);
-        }
-
-        studioCanvas.addEventListener('click', (e) => {
-            if (!currentMappingTarget) {
-                alert("Please select a structural design item target button above first before clicking elements!");
-                return;
-            }
-            const rect = studioCanvas.getBoundingClientRect();
-            const col = Math.floor((e.clientX - rect.left) / SPRITE_SIZE);
-            const row = Math.floor((e.clientY - rect.top) / SPRITE_SIZE);
-            
-            // Retain the existing custom Width and Height of the asset so large ones don't break
-            const existingW = SPRITE_MAP[currentMappingTarget] ? SPRITE_MAP[currentMappingTarget].w : 1;
-            const existingH = SPRITE_MAP[currentMappingTarget] ? SPRITE_MAP[currentMappingTarget].h : 1;
-
-            SPRITE_MAP[currentMappingTarget] = { col, row, w: existingW, h: existingH };
-            logMessage(`✅ Linked asset [${currentMappingTarget}] directly to Matrix index: ${col}, ${row}`);
-            
-            renderStudioGrid();
-            drawScene(); 
-        });
-
-        function renderStudioGrid() {
-            sCtx.clearRect(0, 0, studioCanvas.width, studioCanvas.height);
-            sCtx.drawImage(spriteSheet, 0, 0);
-            
-            sCtx.font = "8px monospace";
-            sCtx.textAlign = "center";
-            
-            // Studio grid is now rendered strictly at the foundational 16px
-            for (let r = 0; r < 44; r++) {
-                for (let c = 0; c < 52; c++) {
-                    sCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-                    sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
-                    
-                    for (let key in SPRITE_MAP) {
-                        if (SPRITE_MAP[key].col === c && SPRITE_MAP[key].row === r) {
-                            sCtx.strokeStyle = "#3b82f6";
-                            sCtx.lineWidth = 2;
-                            
-                            let boxW = SPRITE_MAP[key].w * SPRITE_SIZE;
-                            let boxH = SPRITE_MAP[key].h * SPRITE_SIZE;
-                            sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, boxW, boxH);
-                            
-                            sCtx.lineWidth = 1;
-                            sCtx.fillStyle = "rgba(59, 130, 246, 0.85)";
-                            sCtx.fillRect(c * SPRITE_SIZE, r * SPRITE_SIZE, 16, 10);
-                            sCtx.fillStyle = "#ffffff";
-                            sCtx.fillText(key.substring(0, 3), c * SPRITE_SIZE + 8, r * SPRITE_SIZE + 8);
-                        }
-                    }
-                }
-            }
-        }
-
-        function exportSpriteCode() {
-            let block = "const SPRITE_MAP = {\n";
-            for (let key in SPRITE_MAP) {
-                block += `    ${key.padEnd(12)}: { col: ${SPRITE_MAP[key].col}, row: ${SPRITE_MAP[key].row}, w: ${SPRITE_MAP[key].w}, h: ${SPRITE_MAP[key].h} },\n`;
-            }
-            block += "};";
-            console.log(block);
-            alert("Matrix configuration array produced! Press F12 to copy your custom code block from your developer log window.");
-        }
-
-        function initInventoryUI() {
-            const bag = document.getElementById('player-bag');
-            bag.innerHTML = '';
-            for (let i = 0; i < 24; i++) {
-                let slot = document.createElement('div');
-                slot.className = 'slot';
-                bag.appendChild(slot);
-            }
-        }
-
-        function updateUIDisplays() {
-            document.getElementById('floor-display').innerText = dungeonLevel;
-            document.getElementById('lvl-display').innerText = player.level;
-            document.getElementById('xp-display').innerText = player.xp;
-            document.getElementById('xpneeded-display').innerText = player.xpNeeded;
-            document.getElementById('hp-display').innerText = `${player.hp} / ${player.maxHp}`;
-            document.getElementById('mp-display').innerText = `${player.mp} / ${player.maxMp}`;
-            document.getElementById('turn-display').innerText = turnCount;
-        }
-
-        function logMessage(msg) {
-            const box = document.getElementById('log-box');
-            box.innerHTML = `<div>${msg}</div>` + box.innerHTML;
-        }
-
-        function clearLog() {
-            document.getElementById('log-box').innerHTML = '';
-        }
-
-        function saveGame() { logMessage("💾 Execution state checkpoint saved to browser localStorage registry."); }
-        function loadGame() { logMessage("📂 Snapshot profile checkpoint restored from system browser memory."); }
-
-        window.addEventListener('keydown', (e) => {
-            if (gameState !== 'PLAYING') return; 
-            switch(e.key.toLowerCase()) {
-                case 'arrowup':    case 'w': processMove(0, -1); break;
-                case 'arrowdown':  case 's': processMove(0, 1);  break;
-                case 'arrowleft':  case 'a': processMove(-1, 0); break;
-                case 'arrowright': case 'd': processMove(1, 0);  break;
-            }
-        });
-
-        spriteSheet.onload = () => { 
-            showTitleScreen(); 
-            renderStudioGrid();
-        };
-    </script>
-</body>
-</html>
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            padding: 30px 20px;
-            margin: 0;
-            user-select: none;
-            overflow-y: auto;
-        }
-        #game-container {
-            display: flex;
-            gap: 20px;
-            background-color: #1e293b;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px rgba(0,0,0,0.5);
-        }
-        canvas {
-            border: 3px solid #475569;
-            background-color: #020617;
-            border-radius: 6px;
-        }
-        .panel {
-            width: 320px;
-            background-color: #0f172a;
-            border: 2px solid #475569;
-            border-radius: 6px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-sizing: border-box;
-        }
-        h3, h4 { margin-top: 0; border-bottom: 2px solid #334155; padding-bottom: 5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;}
-        .stat-line { margin-bottom: 6px; font-size: 13px; font-weight: bold; }
-        
-        .equipment-slots {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .bag-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 8px;
-            background-color: #1e293b;
-            padding: 8px;
-            border-radius: 6px;
-            min-height: 56px;
-        }
-        .slot {
-            background-color: #1e293b;
-            border: 2px dashed #475569;
-            border-radius: 4px;
-            height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .slot-label { position: absolute; bottom: 2px; color: #475569; font-size: 8px; text-transform: uppercase; font-weight: bold; }
-        
-        .log {
-            font-size: 11px;
-            color: #cbd5e1;
-            height: 120px;
-            overflow-y: auto;
-            border-top: 2px solid #334155;
-            padding-top: 8px;
-            margin-top: 10px;
-            font-family: monospace;
-            line-height: 1.4;
-        }
-        button {
-            color: white; border: none; border-radius: 4px; padding: 6px 12px;
-            font-weight: bold; font-size: 11px; cursor: pointer; transition: background 0.2s;
-        }
-        button:hover { filter: brightness(1.2); }
-
-        /* Configuration Layout Studio Styles */
-        #mapper-studio {
-            margin-top: 25px;
-            background-color: #1e293b;
-            border: 3px solid #3b82f6;
-            border-radius: 12px;
-            padding: 20px;
-            width: 1180px;
-            box-sizing: border-box;
-        }
-        .mapper-btn {
-            background-color: #475569;
-            padding: 8px 10px;
-            font-size: 11px;
-        }
-        .mapper-btn.active {
-            background-color: #3b82f6;
-            box-shadow: 0 0 10px rgba(59,130,246,0.6);
-        }
-    </style>
-</head>
-<body>
-
-    <div id="game-container">
-        <div style="position: relative; width: 800px; height: 576px;">
-            <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
-            
-            <!-- Game Over / Title Screen Interface Layer Component -->
-            <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
-                <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);">DUNGEONS OF ODDY</h1>
-                <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Procedural Roguelike Sandbox Beta</p>
-                
-                <div style="display: flex; flex-direction: column; gap: 15px; width: 280px;">
-                    <button onclick="startNewGame()" style="background-color: #3b82f6; padding: 12px; font-size: 14px; border-radius: 6px; letter-spacing: 1px;">🛡️ Start New Adventure</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Main Sidebar Panel Interface Component -->
         <div class="panel">
-            <div>
-                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                    <button onclick="saveGame()" style="background-color: #10b981; flex: 1;">Save Game</button>
-                    <button onclick="loadGame()" style="background-color: #6366f1; flex: 1;">Load Game</button>
-                </div>
-
-                <h3>Hero Snapshot</h3>
-                <div class="stat-line">Floor: <span id="floor-display" style="color: #3b82f6;">1</span></div>
-                <div class="stat-line">Level: <span id="lvl-display">1</span> (<span id="xp-display">0</span> / <span id="xpneeded-display">100</span> XP)</div>
-                <div class="stat-line">HP: <span id="hp-display" style="color: #ef4444;">20 / 20</span></div>
-                <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6;">30 / 30</span></div>
-                <div class="stat-line">Turns Ticked: <span id="turn-display">0</span></div>
-
-                <!-- Core Progressive Stat Dynamic Sheet Attributes Frame Component -->
-                <div id="stat-sheet" style="font-size: 11px; line-height: 1.8; background:#1e293b; padding:10px; border-radius:6px; margin: 12px 0; border: 1px solid #334155;">
-                    <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Unspent Attributes Pool: <span id="stat-points-display">0</span></div>
-                    
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <span>STR: <span id="stat-str" style="font-weight:bold; color:#f8fafc;">10</span></span>
-                        <button onclick="raiseStat('str')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <span>INT: <span id="stat-int" style="font-weight:bold; color:#f8fafc;">10</span></span>
-                        <button onclick="raiseStat('int')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <span>CON: <span id="stat-con" style="font-weight:bold; color:#f8fafc;">10</span></span>
-                        <button onclick="raiseStat('con')" class="stat-up-btn" style="background:#3b82f6; padding:1px 6px; font-size:10px; border-radius:3px; font-weight:bold; display:none;">+</button>
-                    </div>
-                    
-                    <div style="border-top: 1px solid #334155; padding-top: 4px; margin-top: 4px; color: #94a3b8;">
-                        ATK Pow: <span id="stat-atk" style="color: #f59e0b; font-weight:bold;">12</span> | DEF Rating: <span id="stat-def" style="color: #10b981; font-weight:bold;">2</span>
-                    </div>
-                </div>
-
-                <h4>Equipment Loadout</h4>
-                <div class="equipment-slots">
-                    <div class="slot" id="slot-main_hand"><span class="slot-label">Weapon</span></div>
-                    <div class="slot" id="slot-torso"><span class="slot-label">Armor</span></div>
-                </div>
-
-                <h4>Spellbook Action Keys</h4>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <button style="background-color: #1e3a8a; text-align: left;">✨ Magic Arrow (3 MP)</button>
-                    <button style="background-color: #7c2d12; text-align: left;">💥 Fireball (8 MP)</button>
-                </div>
+            <h3>Alignment Studio</h3>
+            <img id="sourceImage" src="your-sprite-sheet.png" style="display:none;" alt="Sprite Sheet">
+            <canvas id="studioCanvas" width="416" height="352"></canvas>
+            
+            <div class="controls" id="mapper-controls">
+                <button onclick="setTarget('WALL', this)">Map Wall</button>
+                <button onclick="setTarget('FLOOR', this)">Map Floor</button>
+                <button onclick="setTarget('PLAYER', this)">Map Player</button>
+                <button onclick="setTarget('GOBLIN', this)">Map Goblin</button>
+                <button onclick="setTarget('CHEST', this)">Map Chest</button>
             </div>
-
-            <div>
-                <div id="log-box" class="log"></div>
-            </div>
+            <div id="log">Awaiting input...</div>
         </div>
     </div>
 
-    <!-- Carrying Bag Sub-Container Block Element -->
-    <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px; box-sizing: border-box;">
-        <h3 style="margin:0; border:none; white-space: nowrap;">Carrying Bag:</h3>
-        <div class="bag-grid" id="player-bag" style="flex-grow: 1;"></div>
-    </div>
+<script>
+// --- 1. CONSTANTS & DICTIONARIES ---
+const SHEET_GRID = 16;   // Physical size of a square on the source image
+const GAME_TILE = 32;    // The rendered size in the game window
+const MAP_WIDTH = 25;
+const MAP_HEIGHT = 18;
 
-    <!-- MASTER COORDINATE ALIGNMENT STUDIO PANEL -->
-    <div id="mapper-studio">
-        <h3 style="color: #3b82f6; margin-bottom: 5px;">🔧 Interactive Sprite Sheet Alignment Studio</h3>
-        <p style="font-size: 12px; color: #94a3b8; margin-top: 0; margin-bottom: 15px;">
-            Fix layouts in real time: Click any element button below, then click its corresponding asset sprite tile directly on the matrix map below.
-        </p>
-        
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;" id="mapper-controls">
-            <button class="mapper-btn" onclick="setMappingTarget('WALL', this)">🧱 Map Wall Tile</button>
-            <button class="mapper-btn" onclick="setMappingTarget('FLOOR', this)">🟩 Map Walkable Floor</button>
-            <button class="mapper-btn" onclick="setMappingTarget('DOOR_CLOSED', this)">🚪 Map Closed Door</button>
-            <button class="mapper-btn" onclick="setMappingTarget('DOOR_LOCKED', this)">🔒 Map Locked Door</button>
-            <button class="mapper-btn" onclick="setMappingTarget('CHEST', this)">📦 Map Treasure Chest</button>
-            <button class="mapper-btn" onclick="setMappingTarget('STAIRS_UP', this)">🔼 Map Stairs Up</button>
-            <button class="mapper-btn" onclick="setMappingTarget('STAIRS_DOWN', this)">🔽 Map Stairs Down</button>
-            <button class="mapper-btn" onclick="setMappingTarget('PLAYER', this)">🧙‍♂️ Map Player Hero</button>
-            <button class="mapper-btn" onclick="setMappingTarget('GOBLIN', this)">👹 Map Goblin Monster</button>
-            <button style="background-color: #10b981; margin-left: auto;" onclick="exportSpriteCode()">💾 Export My Custom Sprite Map</button>
-        </div>
+const TILE = { WALL: 0, FLOOR: 1 };
 
-        <div style="position: relative; max-height: 350px; overflow: auto; border: 2px solid #475569; border-radius: 6px; background-color: #020617;">
-            <canvas id="studioCanvas" width="832" height="704" style="cursor: cell; border: none;"></canvas>
-        </div>
-    </div>
+// w and h dictate how many 16px squares the sprite uses
+let SPRITE_MAP = {
+    WALL:   { col: 0, row: 0, w: 1, h: 1 }, 
+    FLOOR:  { col: 1, row: 0, w: 1, h: 1 }, 
+    PLAYER: { col: 0, row: 1, w: 2, h: 2 }, 
+    GOBLIN: { col: 2, row: 1, w: 2, h: 2 },
+    CHEST:  { col: 4, row: 1, w: 2, h: 2 }
+};
 
-    <script>
-        // --- CONSTANTS AND DICTIONARY SPECIFICATIONS ---
-        const SPRITE_SIZE = 32;  // The actual pixel size on the image sheet
-        const RENDER_SCALE = 1;  // Zooms the game in (1 = 1:1 ratio for 32px)
-        const TILE_SIZE = SPRITE_SIZE * RENDER_SCALE; // The game grid is 32x32 visually
-        const MAP_WIDTH = 25;
-        const MAP_HEIGHT = 18;
-        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v5";
+let gameMap = [];
+let currentMappingTarget = null;
+let activeBtn = null;
 
-        const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5, DOOR_LOCKED: 6 };
+// --- 2. CANVAS SETUP ---
+const gCanvas = document.getElementById('gameCanvas');
+const gCtx = gCanvas.getContext('2d');
 
-        // Master alignment mapping calibrated for the true 32x32 sprite scale
-        let SPRITE_MAP = {
-            WALL:        { col: 4,  row: 1 }, 
-            FLOOR:       { col: 12, row: 3 }, 
-            DOOR_CLOSED: { col: 11, row: 0 }, 
-            DOOR_LOCKED: { col: 12, row: 0 }, 
-            CHEST:       { col: 20, row: 0 }, 
-            STAIRS_UP:   { col: 12, row: 1 }, 
-            STAIRS_DOWN: { col: 13, row: 1 }, 
-            PLAYER:      { col: 0,  row: 4 }, 
-            GOBLIN:      { col: 6,  row: 4 }  
-        };
+const sCanvas = document.getElementById('studioCanvas');
+const sCtx = sCanvas.getContext('2d');
 
-        // --- ENGINE RUNTIME STATES ---
-        let gameState = 'TITLE';
-        let dungeonLevel = 1;
-        let turnCount = 0;
-        let gameMap = [];
-        let currentMappingTarget = null;
+const spriteSheet = document.getElementById('sourceImage');
 
-        let player = {
-            x: 0, y: 0, hp: 20, maxHp: 20, mp: 30, maxMp: 30, level: 1, xp: 0, xpNeeded: 100,
-            statPoints: 0,
-            stats: { str: 10, int: 10, con: 10 }
-        };
+// --- 3. INITIALIZATION ---
+spriteSheet.onload = () => {
+    // Crucial for pixel art: Disable blurring
+    gCtx.imageSmoothingEnabled = false;
+    sCtx.imageSmoothingEnabled = false;
 
-        let enemy = { x: 0, y: 0, hp: 12, maxHp: 12, active: false };
+    // Adjust studio canvas to fit whatever image you loaded
+    sCanvas.width = spriteSheet.width || 416;
+    sCanvas.height = spriteSheet.height || 352;
 
-        const spriteSheet = new Image();
-        spriteSheet.crossOrigin = "anonymous"; 
-        spriteSheet.src = 'spritesheet.png';
+    generateDummyMap();
+    renderStudioGrid();
+    drawScene();
+};
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const studioCanvas = document.getElementById('studioCanvas');
-        const sCtx = studioCanvas.getContext('2d');
+// Fallback in case image takes a moment to load
+if (spriteSheet.complete) spriteSheet.onload();
 
-        function showTitleScreen() {
-            gameState = 'TITLE';
-            document.getElementById('title-screen-overlay').style.display = 'flex';
-        }
+// --- 4. ENGINE FUNCTIONS ---
 
-        function startNewGame() {
-            gameState = 'PLAYING';
-            
-            const overlay = document.getElementById('title-screen-overlay');
-            overlay.style.display = 'none';
-            overlay.querySelector('h1').innerText = "DUNGEONS OF ODDY";
-            overlay.querySelector('h1').style.color = "#3b82f6";
-            overlay.querySelector('p').innerText = "A Procedural Roguelike Sandbox Beta";
-            overlay.querySelector('button').innerText = "🛡️ Start New Adventure";
-            
-            dungeonLevel = 1;
-            turnCount = 0;
-            player.level = 1;
-            player.xp = 0;
-            player.xpNeeded = 100;
-            player.statPoints = 0;
-            player.stats = { str: 10, int: 10, con: 10 };
-            
-            recalculateCharacterStats();
-            player.hp = player.maxHp;
-            player.mp = player.maxMp;
-            
-            clearLog();
-            logMessage("⚔️ A fresh procedural quest begins! Defend yourself!");
-
-            generateMapLayout();
-            initInventoryUI();
-            drawScene();
-        }
-
-        // --- BETA FEATURE: PROCEDURAL DUNGEON GENERATOR ---
-        function randInt(min, max) { 
-            return Math.floor(Math.random() * (max - min + 1)) + min; 
-        }
-
-        function generateMapLayout() {
-            gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
-            let rooms = [];
-            const MAX_ROOMS = 5;
-            const MIN_SIZE = 4;
-            const MAX_SIZE = 7;
-            enemy.active = false; // Reset enemy per floor
-
-            for (let i = 0; i < 30; i++) {
-                let w = randInt(MIN_SIZE, MAX_SIZE);
-                let h = randInt(MIN_SIZE, MAX_SIZE);
-                let x = randInt(1, MAP_WIDTH - w - 1);
-                let y = randInt(1, MAP_HEIGHT - h - 1);
-
-                let failed = false;
-                for (let room of rooms) {
-                    if (x < room.x + room.w + 1 && x + w + 1 > room.x &&
-                        y < room.y + room.h + 1 && y + h + 1 > room.y) {
-                        failed = true;
-                        break;
-                    }
-                }
-
-                if (!failed) {
-                    carveRoom(x, y, w, h);
-                    let center = { cx: Math.floor(x + w/2), cy: Math.floor(y + h/2) };
-                    
-                    if (rooms.length === 0) {
-                        player.x = center.cx;
-                        player.y = center.cy;
-                        gameMap[center.cy][center.cx] = TILE.STAIRS_UP;
-                    } else {
-                        let prevCenter = rooms[rooms.length - 1].center;
-                        carveCorridor(prevCenter.cx, prevCenter.cy, center.cx, center.cy);
-                        
-                        if (!enemy.active && randInt(1, 100) > 40) {
-                            enemy.active = true;
-                            enemy.x = center.cx;
-                            enemy.y = center.cy;
-                            enemy.maxHp = 10 + (dungeonLevel * 2); 
-                            enemy.hp = enemy.maxHp;
-                        }
-                        if (randInt(1, 100) > 70) {
-                            gameMap[center.cy][center.cx + 1] = TILE.CHEST;
-                        }
-                    }
-                    
-                    rooms.push({ x, y, w, h, center });
-                    if (rooms.length >= MAX_ROOMS) break;
-                }
-            }
-
-            let lastRoom = rooms[rooms.length - 1];
-            gameMap[lastRoom.center.cy][lastRoom.center.cx] = TILE.STAIRS_DOWN;
-        }
-
-        function carveRoom(rx, ry, w, h) {
-            for(let y = ry; y < ry+h; y++) {
-                for(let x = rx; x < rx+w; x++) {
-                    gameMap[y][x] = TILE.FLOOR;
-                }
+// Generates a simple walled room for testing
+function generateDummyMap() {
+    for (let y = 0; y < MAP_HEIGHT; y++) {
+        let row = [];
+        for (let x = 0; x < MAP_WIDTH; x++) {
+            if (x === 0 || x === MAP_WIDTH - 1 || y === 0 || y === MAP_HEIGHT - 1) {
+                row.push(TILE.WALL);
+            } else {
+                row.push(TILE.FLOOR);
             }
         }
+        gameMap.push(row);
+    }
+}
 
-        function carveCorridor(x1, y1, x2, y2) {
-            let x = x1;
-            let y = y1;
-            while (x !== x2) {
-                gameMap[y][x] = TILE.FLOOR;
-                x += (x < x2) ? 1 : -1;
-            }
-            while (y !== y2) {
-                gameMap[y][x] = TILE.FLOOR;
-                y += (y < y2) ? 1 : -1;
-            }
+// The core rendering logic
+function drawSprite(key, gridX, gridY) {
+    const spr = SPRITE_MAP[key];
+    if (!spr) return;
+    
+    // Calculate size on source image
+    const sourceWidth = spr.w * SHEET_GRID;
+    const sourceHeight = spr.h * SHEET_GRID;
+    
+    // Draw and scale cleanly to GAME_TILE (32px)
+    gCtx.drawImage(
+        spriteSheet, 
+        spr.col * SHEET_GRID, 
+        spr.row * SHEET_GRID, 
+        sourceWidth,          
+        sourceHeight,         
+        gridX * GAME_TILE,    
+        gridY * GAME_TILE,    
+        GAME_TILE,            
+        GAME_TILE             
+    );
+}
+
+function drawScene() {
+    gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+
+    // Draw the map
+    for (let y = 0; y < MAP_HEIGHT; y++) {
+        for (let x = 0; x < MAP_WIDTH; x++) {
+            let tileType = gameMap[y][x];
+            if (tileType === TILE.FLOOR) drawSprite('FLOOR', x, y);
+            if (tileType === TILE.WALL) drawSprite('WALL', x, y);
         }
+    }
 
-        function drawScene() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw dummy entities
+    drawSprite('CHEST', 12, 5);
+    drawSprite('GOBLIN', 15, 8);
+    drawSprite('PLAYER', 12, 9); // Centered player
+}
 
-            for (let y = 0; y < MAP_HEIGHT; y++) {
-                for (let x = 0; x < MAP_WIDTH; x++) {
-                    let tileType = gameMap[y][x];
-                    let key = 'WALL';
-                    
-                    if (tileType === TILE.FLOOR) key = 'FLOOR';
-                    
-                    if (tileType !== TILE.WALL) {
-                        drawSprite('FLOOR', x, y);
-                    }
-                    
-                    if (tileType === TILE.DOOR_CLOSED) key = 'DOOR_CLOSED';
-                    if (tileType === TILE.DOOR_LOCKED) key = 'DOOR_LOCKED';
-                    if (tileType === TILE.CHEST) key = 'CHEST';
-                    if (tileType === TILE.STAIRS_DOWN) key = 'STAIRS_DOWN';
-                    if (tileType === TILE.STAIRS_UP) key = 'STAIRS_UP';
-                    
-                    drawSprite(key, x, y);
-                }
-            }
+// --- 5. ALIGNMENT STUDIO LOGIC ---
+function setTarget(key, btn) {
+    currentMappingTarget = key;
+    if (activeBtn) activeBtn.classList.remove('active');
+    btn.classList.add('active');
+    activeBtn = btn;
+    document.getElementById('log').innerText = `Click on the grid to map: ${key}`;
+}
 
-            if (enemy.active) {
-                drawSprite('GOBLIN', enemy.x, enemy.y);
-            }
+sCanvas.addEventListener('click', (e) => {
+    if (!currentMappingTarget) {
+        alert("Please select a target button first!");
+        return;
+    }
+    
+    const rect = sCanvas.getBoundingClientRect();
+    const col = Math.floor((e.clientX - rect.left) / SHEET_GRID);
+    const row = Math.floor((e.clientY - rect.top) / SHEET_GRID);
+    
+    // Keep the dictionary's w/h values intact!
+    const existingW = SPRITE_MAP[currentMappingTarget].w || 1;
+    const existingH = SPRITE_MAP[currentMappingTarget].h || 1;
+
+    SPRITE_MAP[currentMappingTarget] = { col, row, w: existingW, h: existingH };
+    document.getElementById('log').innerText = `✅ Mapped [${currentMappingTarget}] to Col: ${col}, Row: ${row}`;
+    
+    renderStudioGrid(); 
+    drawScene(); 
+});
+
+function renderStudioGrid() {
+    sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
+    
+    // Draw the base image
+    sCtx.drawImage(spriteSheet, 0, 0);
+    
+    const cols = sCanvas.width / SHEET_GRID;
+    const rows = sCanvas.height / SHEET_GRID;
+
+    // Draw the selection grid
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+            sCtx.strokeRect(c * SHEET_GRID, r * SHEET_GRID, SHEET_GRID, SHEET_GRID);
             
-            drawSprite('PLAYER', player.x, player.y);
-            updateUIDisplays();
-        }
-
-        function drawSprite(key, gridX, gridY) {
-            const spr = SPRITE_MAP[key];
-            if (!spr) return;
-            ctx.drawImage(
-                spriteSheet, 
-                spr.col * SPRITE_SIZE, 
-                spr.row * SPRITE_SIZE, 
-                SPRITE_SIZE, 
-                SPRITE_SIZE, 
-                gridX * TILE_SIZE, 
-                gridY * TILE_SIZE, 
-                TILE_SIZE, 
-                TILE_SIZE
-            );
-        }
-
-        function processMove(dx, dy) {
-            let targetX = player.x + dx;
-            let targetY = player.y + dy;
-            
-            if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
-            if (gameMap[targetY][targetX] === TILE.WALL) return;
-
-            if (gameMap[targetY][targetX] === TILE.DOOR_CLOSED) {
-                gameMap[targetY][targetX] = TILE.FLOOR;
-                logMessage("🚪 Opened a heavy wooden structural passage door.");
-                endPlayerTurn();
-                return;
-            }
-
-            if (gameMap[targetY][targetX] === TILE.STAIRS_DOWN) {
-                dungeonLevel++;
-                logMessage(`🧗 You descend deeper into the darkness of Floor ${dungeonLevel}...`);
-                
-                player.hp = Math.min(player.maxHp, player.hp + 5); 
-                generateMapLayout(); 
-                drawScene();
-                return;
-            }
-
-            if (enemy.active && targetX === enemy.x && targetY === enemy.y) {
-                let damageExecuted = 3 + Math.floor((player.stats.str - 10) / 2);
-                enemy.hp -= damageExecuted;
-                logMessage(`⚔️ You strike the Goblin for ${damageExecuted} melee dmg!`);
-                
-                if (enemy.hp <= 0) {
-                    enemy.active = false;
-                    logMessage("💀 The Goblin crumbles into dust!");
-                    gainExperience(100); 
-                }
-                endPlayerTurn();
-                return;
-            }
-
-            player.x = targetX; 
-            player.y = targetY;
-            endPlayerTurn();
-        }
-
-        function endPlayerTurn() {
-            turnCount++;
-            
-            if (enemy.active) {
-                let dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
-                if (dist === 1) {
-                    let monsterDamage = Math.max(1, 4 - Math.floor((player.stats.con - 10) / 2));
-                    player.hp -= monsterDamage;
-                    logMessage(`💥 Goblin hits you for ${monsterDamage} damage!`);
-                }
-            }
-
-            drawScene();
-            
-            if (player.hp <= 0) {
-                triggerGameOver();
-            }
-        }
-
-        function triggerGameOver() {
-            gameState = 'GAMEOVER';
-            logMessage("💀 **YOU PERISHED!** The dungeon claims your soul.");
-            
-            const overlay = document.getElementById('title-screen-overlay');
-            overlay.style.display = 'flex';
-            
-            overlay.querySelector('h1').innerText = "GAME OVER";
-            overlay.querySelector('h1').style.color = "#ef4444";
-            overlay.querySelector('p').innerText = `Died on Floor ${dungeonLevel} after surviving ${turnCount} turns.`;
-            overlay.querySelector('button').innerText = "🛡️ Try Again (Respawn)";
-        }
-
-        function recalculateCharacterStats() {
-            player.maxHp = 10 + (player.stats.con * 1); 
-            player.maxMp = 10 + (player.stats.int * 2);
-
-            let calculatedAtk = 12 + Math.floor((player.stats.str - 10) / 2);
-            let calculatedDef = 2 + Math.floor((player.stats.con - 10) / 2);
-            
-            document.getElementById('stat-str').innerText = player.stats.str;
-            document.getElementById('stat-int').innerText = player.stats.int;
-            document.getElementById('stat-con').innerText = player.stats.con;
-            document.getElementById('stat-atk').innerText = calculatedAtk;
-            document.getElementById('stat-def').innerText = calculatedDef;
-            document.getElementById('stat-points-display').innerText = player.statPoints;
-
-            const buttons = document.querySelectorAll('.stat-up-btn');
-            buttons.forEach(btn => {
-                btn.style.display = (player.statPoints > 0) ? 'inline-block' : 'none';
-            });
-        }
-
-        function raiseStat(statName) {
-            if (!player.statPoints || player.statPoints <= 0) return;
-            
-            player.statPoints--;
-            player.stats[statName]++;
-            
-            recalculateCharacterStats();
-            
-            if (statName === 'con') player.hp = Math.min(player.maxHp, player.hp + 1);
-            if (statName === 'int') player.mp = Math.min(player.maxMp, player.mp + 2);
-
-            logMessage(`💪 Attribute up! Upgraded [${statName.toUpperCase()}] safely.`);
-            drawScene();
-        }
-
-        function gainExperience(amt) {
-            player.xp += amt;
-            if (player.xp >= player.xpNeeded) {
-                player.level++;
-                player.xp -= player.xpNeeded;
-                player.xpNeeded = player.level * 100;
-                
-                player.statPoints += 3;
-                
-                recalculateCharacterStats();
-                player.hp = player.maxHp;
-                player.mp = player.maxMp;
-                
-                logMessage("✨ **LEVEL UP!** Earned 3 allocation points. Press the [+] modifiers keys on sheet.");
-            }
-        }
-
-        function setMappingTarget(target, btn) {
-            currentMappingTarget = target;
-            document.querySelectorAll('.mapper-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            logMessage(`🎯 Calibration target tracking: Choose the graphic element for [${target}] below.`);
-        }
-
-        studioCanvas.addEventListener('click', (e) => {
-            if (!currentMappingTarget) {
-                alert("Please select a structural design item target button above first before clicking elements!");
-                return;
-            }
-            const rect = studioCanvas.getBoundingClientRect();
-            const col = Math.floor((e.clientX - rect.left) / SPRITE_SIZE);
-            const row = Math.floor((e.clientY - rect.top) / SPRITE_SIZE);
-            
-            SPRITE_MAP[currentMappingTarget] = { col, row };
-            logMessage(`✅ Linked asset [${currentMappingTarget}] directly to Matrix index: ${col}, ${row}`);
-            
-            renderStudioGrid();
-            drawScene(); 
-        });
-
-        function renderStudioGrid() {
-            sCtx.clearRect(0, 0, studioCanvas.width, studioCanvas.height);
-            sCtx.drawImage(spriteSheet, 0, 0);
-            
-            sCtx.font = "8px monospace";
-            sCtx.textAlign = "center";
-            
-            // Adjust loop ranges for the 32x32 grid calculation (832 width / 32 = 26 cols, 704 height / 32 = 22 rows)
-            for (let r = 0; r < 22; r++) {
-                for (let c = 0; c < 26; c++) {
-                    sCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-                    sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
-                    
-                    for (let key in SPRITE_MAP) {
-                        if (SPRITE_MAP[key].col === c && SPRITE_MAP[key].row === r) {
-                            sCtx.strokeStyle = "#3b82f6";
-                            sCtx.lineWidth = 2;
-                            sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
-                            sCtx.lineWidth = 1;
-                            
-                            sCtx.fillStyle = "rgba(59, 130, 246, 0.85)";
-                            sCtx.fillRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, 10);
-                            sCtx.fillStyle = "#ffffff";
-                            sCtx.fillText(key.substring(0, 3), c * SPRITE_SIZE + 8, r * SPRITE_SIZE + 8);
-                        }
-                    }
-                }
-            }
-        }
-
-        function exportSpriteCode() {
-            let block = "const SPRITE_MAP = {\n";
+            // Highlight mapped sprites
             for (let key in SPRITE_MAP) {
-                block += `    ${key.padEnd(12)}: { col: ${SPRITE_MAP[key].col}, row: ${SPRITE_MAP[key].row} },\n`;
+                let spr = SPRITE_MAP[key];
+                if (spr.col === c && spr.row === r) {
+                    let w = spr.w * SHEET_GRID;
+                    let h = spr.h * SHEET_GRID;
+                    
+                    sCtx.strokeStyle = "#3b82f6";
+                    sCtx.lineWidth = 2;
+                    sCtx.strokeRect(c * SHEET_GRID, r * SHEET_GRID, w, h);
+                    
+                    sCtx.lineWidth = 1;
+                    sCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
+                    sCtx.fillRect(c * SHEET_GRID, r * SHEET_GRID, 18, 12);
+                    sCtx.fillStyle = "#ffffff";
+                    sCtx.font = "10px Arial";
+                    sCtx.fillText(key.substring(0, 3), c * SHEET_GRID + 2, r * SHEET_GRID + 10);
+                }
             }
-            block += "};";
-            console.log(block);
-            alert("Matrix configuration array produced! Press F12 to copy your custom code block from your developer log window.");
         }
-
-        function initInventoryUI() {
-            const bag = document.getElementById('player-bag');
-            bag.innerHTML = '';
-            for (let i = 0; i < 24; i++) {
-                let slot = document.createElement('div');
-                slot.className = 'slot';
-                bag.appendChild(slot);
-            }
-        }
-
-        function updateUIDisplays() {
-            document.getElementById('floor-display').innerText = dungeonLevel;
-            document.getElementById('lvl-display').innerText = player.level;
-            document.getElementById('xp-display').innerText = player.xp;
-            document.getElementById('xpneeded-display').innerText = player.xpNeeded;
-            document.getElementById('hp-display').innerText = `${player.hp} / ${player.maxHp}`;
-            document.getElementById('mp-display').innerText = `${player.mp} / ${player.maxMp}`;
-            document.getElementById('turn-display').innerText = turnCount;
-        }
-
-        function logMessage(msg) {
-            const box = document.getElementById('log-box');
-            box.innerHTML = `<div>${msg}</div>` + box.innerHTML;
-        }
-
-        function clearLog() {
-            document.getElementById('log-box').innerHTML = '';
-        }
-
-        function saveGame() { logMessage("💾 Execution state checkpoint saved to browser localStorage registry."); }
-        function loadGame() { logMessage("📂 Snapshot profile checkpoint restored from system browser memory."); }
-
-        window.addEventListener('keydown', (e) => {
-            if (gameState !== 'PLAYING') return; 
-            switch(e.key.toLowerCase()) {
-                case 'arrowup':    case 'w': processMove(0, -1); break;
-                case 'arrowdown':  case 's': processMove(0, 1);  break;
-                case 'arrowleft':  case 'a': processMove(-1, 0); break;
-                case 'arrowright': case 'd': processMove(1, 0);  break;
-            }
-        });
-
-        spriteSheet.onload = () => { 
-            showTitleScreen(); 
-            renderStudioGrid();
-        };
-    </script>
+    }
+}
+</script>
 </body>
 </html>
