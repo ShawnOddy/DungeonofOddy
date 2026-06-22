@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Full Custom Sprites</title>
+    <title>Dungeon Engine - Advanced Stats & Combat</title>
     <style>
         body {
             background-color: #1e1e2f;
@@ -21,12 +21,49 @@
             gap: 20px;
             flex-wrap: wrap;
             justify-content: center;
+            align-items: flex-start;
         }
         .panel {
             background-color: #2a2a3b;
             padding: 15px;
             border-radius: 8px;
             border: 2px solid #3b3b4f;
+        }
+        .stats-panel {
+            width: 300px;
+            background-color: #1a1a24;
+            border-color: #10b981;
+        }
+        .stats-panel h3 {
+            margin-top: 0;
+            color: #10b981;
+            border-bottom: 1px solid #3b3b4f;
+            padding-bottom: 5px;
+            font-size: 1.1em;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        .stat-value { color: #ffffff; }
+        .danger { color: #ef4444 !important; }
+        .magic { color: #60a5fa !important; }
+        .attr-box {
+            background-color: #1e1e2f;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 1px solid #3b3b4f;
+            font-size: 0.85em;
+        }
+        .attr-detail { color: #9ca3af; font-size: 0.9em; font-weight: normal; }
+        ul {
+            list-style-type: square;
+            padding-left: 20px;
+            color: #fbbf24;
+            margin-top: 5px;
         }
         canvas {
             background-color: #000;
@@ -42,7 +79,7 @@
             flex-wrap: wrap;
             gap: 8px;
             margin-top: 10px;
-            max-width: 416px;
+            max-width: 256px;
         }
         button {
             background-color: #3b82f6;
@@ -51,7 +88,6 @@
             padding: 8px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-family: inherit;
             font-weight: bold;
         }
         button:hover { background-color: #2563eb; }
@@ -59,6 +95,14 @@
         #log {
             margin-top: 20px;
             color: #10b981;
+            font-weight: bold;
+            min-height: 1.5em;
+        }
+        .instructions {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #9ca3af;
+            text-align: center;
         }
     </style>
 </head>
@@ -67,14 +111,49 @@
     <h1>Dungeon Engine</h1>
 
     <div class="container">
+        
+        <div class="panel stats-panel">
+            <h3>Hero Status</h3>
+            <div class="stat-row">
+                <span>Floor:</span>
+                <span class="stat-value" id="ui-level">1</span>
+            </div>
+            <div class="stat-row">
+                <span>HP:</span>
+                <span class="stat-value" id="ui-hp">20 / 20</span>
+            </div>
+            <div class="stat-row">
+                <span>MP:</span>
+                <span class="stat-value magic" id="ui-mp">20 / 20</span>
+            </div>
+            <div class="stat-row">
+                <span>Gold:</span>
+                <span class="stat-value" id="ui-gold">0</span>
+            </div>
+
+            <div class="attr-box">
+                <div class="stat-row"><span>STR:</span><span id="ui-str" class="stat-value"></span></div>
+                <div class="stat-row"><span>DEX:</span><span id="ui-dex" class="stat-value"></span></div>
+                <div class="stat-row"><span>CON:</span><span id="ui-con" class="stat-value"></span></div>
+                <div class="stat-row"><span>INT:</span><span id="ui-int" class="stat-value"></span></div>
+                <div class="stat-row"><span>WIS:</span><span id="ui-wis" class="stat-value"></span></div>
+            </div>
+            
+            <h3 style="margin-top: 15px;">Inventory</h3>
+            <ul id="ui-inventory">
+                <li style="color: #c8c8d0;">Empty</li>
+            </ul>
+        </div>
+
         <div class="panel">
-            <h3>Game View</h3>
-            <canvas id="gameCanvas" width="800" height="576"></canvas>
+            <canvas id="gameCanvas" width="576" height="576"></canvas>
+            <div id="log">Welcome to the dungeon...</div>
+            <div class="instructions">Arrows/WASD to Move | Enter for Stairs<br>'H' to Heal (5 MP) | 'F' for Arcane Blast (3 MP)</div>
         </div>
 
         <div class="panel">
             <h3>Alignment Studio</h3>
-            <canvas id="studioCanvas" width="256" height="192"></canvas>
+            <canvas id="studioCanvas" width="256" height="256"></canvas>
             
             <div class="controls" id="mapper-controls">
                 <button onclick="setTarget('WALL', this)">Wall</button>
@@ -89,46 +168,59 @@
                 <button onclick="setTarget('HERO', this)">Hero</button>
                 <button onclick="setTarget('GOBLIN', this)">Goblin</button>
                 <button onclick="setTarget('BAT', this)">Bat</button>
+                <button onclick="setTarget('TRAP', this)">Trap</button>
             </div>
-            <div id="log">Awaiting input...</div>
         </div>
     </div>
 
 <script>
 // --- 1. CONSTANTS & DICTIONARIES ---
-const SHEET_GRID = 32;   // Everything is uniformly 32x32 now!
+const SHEET_GRID = 32;   
 const GAME_TILE = 32;    
-const MAP_WIDTH = 25;
+const MAP_WIDTH = 18; 
 const MAP_HEIGHT = 18;
 
-// Map tile definitions
 const TILE = { 
     WALL: 0, FLOOR: 1, 
     DOOR_CLOSED: 2, DOOR_OPEN: 3, DOOR_BROKEN: 4,
-    STAIRS_UP: 5, STAIRS_DOWN: 6
+    STAIRS_UP: 5, STAIRS_DOWN: 6,
+    CHEST_CLOSED: 7, CHEST_OPEN: 8,
+    GOBLIN: 9, BAT: 10, TRAP: 11
 };
 
-// Auto-mapped dictionary to our new 4x3 generator grid
 let SPRITE_MAP = {
-    WALL:         { col: 0, row: 0, w: 1, h: 1 }, 
-    FLOOR:        { col: 1, row: 0, w: 1, h: 1 }, 
-    STAIRS_UP:    { col: 2, row: 0, w: 1, h: 1 },
-    STAIRS_DOWN:  { col: 3, row: 0, w: 1, h: 1 },
-    DOOR_CLOSED:  { col: 0, row: 1, w: 1, h: 1 },
-    DOOR_OPEN:    { col: 1, row: 1, w: 1, h: 1 },
-    DOOR_BROKEN:  { col: 2, row: 1, w: 1, h: 1 },
-    CHEST_CLOSED: { col: 3, row: 1, w: 1, h: 1 },
-    CHEST_OPEN:   { col: 0, row: 2, w: 1, h: 1 },
-    HERO:         { col: 1, row: 2, w: 1, h: 1 }, 
-    GOBLIN:       { col: 2, row: 2, w: 1, h: 1 },
-    BAT:          { col: 3, row: 2, w: 1, h: 1 }
+    WALL:         { col: 0, row: 0 }, FLOOR:        { col: 1, row: 0 }, 
+    STAIRS_UP:    { col: 2, row: 0 }, STAIRS_DOWN:  { col: 3, row: 0 },
+    DOOR_CLOSED:  { col: 0, row: 1 }, DOOR_OPEN:    { col: 1, row: 1 },
+    DOOR_BROKEN:  { col: 2, row: 1 }, CHEST_CLOSED: { col: 3, row: 1 },
+    CHEST_OPEN:   { col: 0, row: 2 }, HERO:         { col: 1, row: 2 }, 
+    GOBLIN:       { col: 2, row: 2 }, BAT:          { col: 3, row: 2 },
+    TRAP:         { col: 0, row: 3 }
 };
 
-// GAME STATE
-let gameMap = [];
-let playerPos = { x: 12, y: 12 }; 
+// --- RPG STATE VARIABLES ---
+let playerState = {
+    stats: {
+        str: 12, // Dmg & Carry Weight
+        dex: 10, // Crit Chance & Trap Sight
+        con: 14, // Max HP & Defense
+        int: 16, // Max MP & Magic Dmg
+        wis: 15  // Regen & Heal Power
+    },
+    hp: 0, maxHp: 0,
+    mp: 0, maxMp: 0,
+    gold: 0, inventory: [], level: 1
+};
 
-// STUDIO STATE
+playerState.maxHp = playerState.stats.con * 2;
+playerState.hp = playerState.maxHp;
+playerState.maxMp = playerState.stats.int * 2;
+playerState.mp = playerState.maxMp;
+
+const LOOT_TABLE = ["Health Potion", "Iron Dagger", "Leather Boots", "Mystery Scroll"];
+
+let gameMap = [];
+let playerPos = { x: 2, y: 2 }; 
 let currentMappingTarget = null;
 let activeBtn = null;
 
@@ -137,8 +229,6 @@ const gCanvas = document.getElementById('gameCanvas');
 const gCtx = gCanvas.getContext('2d');
 const sCanvas = document.getElementById('studioCanvas');
 const sCtx = sCanvas.getContext('2d');
-
-// --- 3. PROCEDURAL SPRITE SHEET GENERATOR ---
 const spriteSheet = new Image();
 
 function drawTile(ctx, col, row, drawFunction) {
@@ -150,77 +240,30 @@ function drawTile(ctx, col, row, drawFunction) {
 
 function generateInternalSpriteSheet() {
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = 128; // 4 columns * 32px
-    tempCanvas.height = 96; // 3 rows * 32px
+    tempCanvas.width = 128; tempCanvas.height = 128; 
     const ctx = tempCanvas.getContext('2d');
 
-    // ROW 0: Environment
-    drawTile(ctx, 0, 0, c => { // WALL
-        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32);
-        c.fillStyle = '#1f2937'; c.fillRect(0, 14, 32, 2);
-        c.fillRect(14, 0, 2, 14); c.fillRect(24, 16, 2, 16);
-    });
-    drawTile(ctx, 1, 0, c => { // FLOOR
-        c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32);
-        c.fillStyle = '#27272a'; c.fillRect(4, 4, 8, 8); c.fillRect(20, 18, 6, 6);
-    });
-    drawTile(ctx, 2, 0, c => { // STAIRS UP
-        c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32);
-        c.fillStyle = '#9ca3af'; c.fillRect(4, 16, 12, 16); c.fillRect(16, 4, 12, 28);
-    });
-    drawTile(ctx, 3, 0, c => { // STAIRS DOWN
-        c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32);
-        c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 24);
-        c.fillStyle = '#4b5563'; c.fillRect(4, 4, 12, 8); c.fillRect(8, 12, 12, 8);
-    });
+    // Rows 1 - 3
+    drawTile(ctx, 0, 0, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#1f2937'; c.fillRect(0, 14, 32, 2); c.fillRect(14, 0, 2, 14); c.fillRect(24, 16, 2, 16); });
+    drawTile(ctx, 1, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#27272a'; c.fillRect(4, 4, 8, 8); c.fillRect(20, 18, 6, 6); });
+    drawTile(ctx, 2, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#9ca3af'; c.fillRect(4, 16, 12, 16); c.fillRect(16, 4, 12, 28); });
+    drawTile(ctx, 3, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 24); c.fillStyle = '#4b5563'; c.fillRect(4, 4, 12, 8); c.fillRect(8, 12, 12, 8); });
+    drawTile(ctx, 0, 1, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#78350f'; c.fillRect(4, 4, 24, 28); c.fillStyle = '#fbbf24'; c.fillRect(22, 16, 4, 4); });
+    drawTile(ctx, 1, 1, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); c.fillStyle = '#78350f'; c.fillRect(0, 4, 6, 28); });
+    drawTile(ctx, 2, 1, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); c.fillStyle = '#78350f'; c.fillRect(4, 4, 6, 12); c.fillRect(20, 20, 8, 12); c.fillRect(18, 4, 10, 6); });
+    drawTile(ctx, 3, 1, c => { c.fillStyle = '#b45309'; c.fillRect(4, 12, 24, 16); c.fillStyle = '#d97706'; c.fillRect(4, 12, 24, 4); c.fillStyle = '#fbbf24'; c.fillRect(14, 14, 4, 6); });
+    drawTile(ctx, 0, 2, c => { c.fillStyle = '#b45309'; c.fillRect(4, 16, 24, 12); c.fillStyle = '#d97706'; c.fillRect(4, 4, 24, 4); c.fillStyle = '#fbbf24'; c.fillRect(8, 12, 16, 4); c.fillStyle = '#60a5fa'; c.fillRect(12, 10, 4, 4); });
+    drawTile(ctx, 1, 2, c => { c.fillStyle = '#2563eb'; c.fillRect(8, 8, 16, 20); c.fillStyle = '#fca5a5'; c.fillRect(10, 10, 12, 8); c.fillStyle = '#94a3b8'; c.fillRect(24, 12, 4, 12); });
+    drawTile(ctx, 2, 2, c => { c.fillStyle = '#16a34a'; c.fillRect(8, 12, 16, 16); c.fillStyle = '#ef4444'; c.fillRect(10, 14, 4, 4); c.fillRect(18, 14, 4, 4); c.fillStyle = '#78350f'; c.fillRect(4, 10, 4, 16); });
+    drawTile(ctx, 3, 2, c => { c.fillStyle = '#581c87'; c.fillRect(12, 12, 8, 8); c.fillStyle = '#000000'; c.beginPath(); c.moveTo(12,14); c.lineTo(2,8); c.lineTo(6,18); c.fill(); c.beginPath(); c.moveTo(20,14); c.lineTo(30,8); c.lineTo(26,18); c.fill(); c.fillStyle = '#ef4444'; c.fillRect(14, 14, 2, 2); c.fillRect(18, 14, 2, 2); });
 
-    // ROW 1: Doors & Chest Closed
-    drawTile(ctx, 0, 1, c => { // DOOR CLOSED
-        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); // wall frame
-        c.fillStyle = '#78350f'; c.fillRect(4, 4, 24, 28); // wood door
-        c.fillStyle = '#fbbf24'; c.fillRect(22, 16, 4, 4); // knob
-    });
-    drawTile(ctx, 1, 1, c => { // DOOR OPEN
-        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); // wall frame
-        c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); // dark opening
-        c.fillStyle = '#78350f'; c.fillRect(0, 4, 6, 28); // swung open door
-    });
-    drawTile(ctx, 2, 1, c => { // DOOR BROKEN
-        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); // wall frame
-        c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); // dark opening
-        c.fillStyle = '#78350f'; 
-        c.fillRect(4, 4, 6, 12); c.fillRect(20, 20, 8, 12); // splinters
-        c.fillRect(18, 4, 10, 6);
-    });
-    drawTile(ctx, 3, 1, c => { // CHEST CLOSED
-        c.fillStyle = '#b45309'; c.fillRect(4, 12, 24, 16); // box
-        c.fillStyle = '#d97706'; c.fillRect(4, 12, 24, 4); // lid
-        c.fillStyle = '#fbbf24'; c.fillRect(14, 14, 4, 6); // lock
-    });
-
-    // ROW 2: Chest Open & Entities
-    drawTile(ctx, 0, 2, c => { // CHEST OPEN
-        c.fillStyle = '#b45309'; c.fillRect(4, 16, 24, 12); // box
-        c.fillStyle = '#d97706'; c.fillRect(4, 4, 24, 4); // open lid
-        c.fillStyle = '#fbbf24'; c.fillRect(8, 12, 16, 4); // gold inside
-        c.fillStyle = '#60a5fa'; c.fillRect(12, 10, 4, 4); // gem
-    });
-    drawTile(ctx, 1, 2, c => { // HERO
-        c.fillStyle = '#2563eb'; c.fillRect(8, 8, 16, 20); // body
-        c.fillStyle = '#fca5a5'; c.fillRect(10, 10, 12, 8); // face
-        c.fillStyle = '#94a3b8'; c.fillRect(24, 12, 4, 12); // sword
-    });
-    drawTile(ctx, 2, 2, c => { // GOBLIN
-        c.fillStyle = '#16a34a'; c.fillRect(8, 12, 16, 16); // body
-        c.fillStyle = '#ef4444'; c.fillRect(10, 14, 4, 4); c.fillRect(18, 14, 4, 4); // eyes
-        c.fillStyle = '#78350f'; c.fillRect(4, 10, 4, 16); // club
-    });
-    drawTile(ctx, 3, 2, c => { // BAT
-        c.fillStyle = '#581c87'; c.fillRect(12, 12, 8, 8); // body
-        c.fillStyle = '#000000'; 
-        c.beginPath(); c.moveTo(12,14); c.lineTo(2,8); c.lineTo(6,18); c.fill(); // left wing
-        c.beginPath(); c.moveTo(20,14); c.lineTo(30,8); c.lineTo(26,18); c.fill(); // right wing
-        c.fillStyle = '#ef4444'; c.fillRect(14, 14, 2, 2); c.fillRect(18, 14, 2, 2); // eyes
+    // Row 4 (Traps)
+    drawTile(ctx, 0, 3, c => { 
+        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); 
+        c.fillStyle = '#111827'; c.fillRect(8, 8, 16, 16); 
+        c.fillStyle = '#9ca3af'; 
+        c.beginPath(); c.moveTo(16,4); c.lineTo(12,12); c.lineTo(20,12); c.fill(); 
+        c.beginPath(); c.moveTo(16,28); c.lineTo(12,20); c.lineTo(20,20); c.fill();
     });
 
     spriteSheet.src = tempCanvas.toDataURL("image/png");
@@ -231,35 +274,192 @@ spriteSheet.onload = () => {
     gCtx.imageSmoothingEnabled = false;
     sCtx.imageSmoothingEnabled = false;
     generateMap();
-    renderStudioGrid();
+    updateUI(); 
     drawScene();
 };
-
 generateInternalSpriteSheet();
 
-// --- 5. CORE GAMEPLAY LOGIC ---
+// --- 5. UI UPDATER ---
+function updateUI() {
+    document.getElementById('ui-level').innerText = playerState.level;
+    
+    let hpElement = document.getElementById('ui-hp');
+    hpElement.innerText = `${playerState.hp} / ${playerState.maxHp}`;
+    if (playerState.hp <= playerState.maxHp * 0.25) hpElement.classList.add('danger');
+    else hpElement.classList.remove('danger');
 
-// Listen for keyboard input to move the player
+    document.getElementById('ui-mp').innerText = `${playerState.mp} / ${playerState.maxMp}`;
+    document.getElementById('ui-gold').innerText = playerState.gold;
+
+    // Derived Math Logic
+    let dmg = 1 + Math.floor(playerState.stats.str / 4);
+    let cap = playerState.stats.str;
+    let crit = playerState.stats.dex; 
+    let def = Math.floor(playerState.stats.con / 5);
+    let mdmg = 2 + Math.floor(playerState.stats.int / 3);
+    let regen = Math.floor(playerState.stats.wis * 1.5);
+
+    document.getElementById('ui-str').innerHTML = `${playerState.stats.str} <span class="attr-detail">(Dmg:+${dmg} Cap:${cap})</span>`;
+    document.getElementById('ui-dex').innerHTML = `${playerState.stats.dex} <span class="attr-detail">(Crit:${crit}%)</span>`;
+    document.getElementById('ui-con').innerHTML = `${playerState.stats.con} <span class="attr-detail">(Def:${def})</span>`;
+    document.getElementById('ui-int').innerHTML = `${playerState.stats.int} <span class="attr-detail">(Mag Dmg:${mdmg})</span>`;
+    document.getElementById('ui-wis').innerHTML = `${playerState.stats.wis} <span class="attr-detail">(Regen:${regen}%)</span>`;
+
+    const invList = document.getElementById('ui-inventory');
+    if (playerState.inventory.length === 0) {
+        invList.innerHTML = '<li style="color: #c8c8d0;">Empty</li>';
+    } else {
+        invList.innerHTML = playerState.inventory.map(item => `<li>${item}</li>`).join('');
+    }
+}
+
+// --- 6. CORE GAMEPLAY LOGIC ---
 window.addEventListener('keydown', (e) => {
-    let targetX = playerPos.x;
-    let targetY = playerPos.y;
-
-    if (e.key === 'ArrowUp' || e.key === 'w') targetY--;
-    if (e.key === 'ArrowDown' || e.key === 's') targetY++;
-    if (e.key === 'ArrowLeft' || e.key === 'a') targetX--;
-    if (e.key === 'ArrowRight' || e.key === 'd') targetX++;
-
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F'].includes(e.key)) {
         e.preventDefault();
     }
 
-    // Collision Detection: Only move if the target tile is NOT a wall and NOT a closed door
-    let targetTile = gameMap[targetY] ? gameMap[targetY][targetX] : null;
-    
-    if (targetTile !== null && targetTile !== TILE.WALL && targetTile !== TILE.DOOR_CLOSED) {
-        playerPos.x = targetX;
-        playerPos.y = targetY;
-        drawScene(); 
+    if (playerState.hp <= 0) return; 
+
+    let tookAction = false;
+
+    // SPELLCASTING: Heal (WIS)
+    if (e.key === 'h' || e.key === 'H') {
+        if (playerState.mp >= 5) {
+            let healAmount = Math.floor(playerState.stats.wis / 1.5) + 2; 
+            playerState.mp -= 5;
+            playerState.hp = Math.min(playerState.maxHp, playerState.hp + healAmount);
+            document.getElementById('log').innerText = `✨ Cast Heal! Recovered ${healAmount} HP.`;
+            tookAction = true;
+        } else {
+            document.getElementById('log').innerText = `⚠️ Not enough MP to cast Heal! (Needs 5)`;
+        }
+    }
+
+    // SPELLCASTING: Arcane Blast (INT)
+    else if (e.key === 'f' || e.key === 'F') {
+        if (playerState.mp >= 3) {
+            playerState.mp -= 3;
+            let mdmg = 2 + Math.floor(playerState.stats.int / 3);
+            let hitCount = 0;
+            
+            // Blast all 4 adjacent tiles
+            let adjs = [{x:0,y:-1}, {x:0,y:1}, {x:-1,y:0}, {x:1,y:0}];
+            adjs.forEach(dir => {
+                let tx = playerPos.x + dir.x;
+                let ty = playerPos.y + dir.y;
+                let t = gameMap[ty] ? gameMap[ty][tx] : null;
+                if (t === TILE.GOBLIN || t === TILE.BAT) {
+                    gameMap[ty][tx] = TILE.FLOOR; // Instant kill
+                    hitCount++;
+                }
+            });
+
+            if (hitCount > 0) {
+                document.getElementById('log').innerText = `🔥 Arcane Blast! Hit ${hitCount} enemy(s) for ${mdmg} magic damage.`;
+            } else {
+                document.getElementById('log').innerText = `🔥 Arcane Blast fizzled... no enemies nearby.`;
+            }
+            tookAction = true;
+        } else {
+            document.getElementById('log').innerText = `⚠️ Not enough MP to cast Arcane Blast! (Needs 3)`;
+        }
+    }
+
+    // STAIRS LOGIC
+    else if (e.key === 'Enter') {
+        if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
+            playerState.level++;
+            generateMap(); 
+            document.getElementById('log').innerText = `You descend to Floor ${playerState.level}...`;
+            tookAction = true;
+        }
+    }
+
+    // MOVEMENT, COMBAT & INTERACTION LOGIC
+    else {
+        let targetX = playerPos.x;
+        let targetY = playerPos.y;
+
+        if (e.key === 'ArrowUp' || e.key === 'w') { targetY--; tookAction = true; }
+        if (e.key === 'ArrowDown' || e.key === 's') { targetY++; tookAction = true; }
+        if (e.key === 'ArrowLeft' || e.key === 'a') { targetX--; tookAction = true; }
+        if (e.key === 'ArrowRight' || e.key === 'd') { targetX++; tookAction = true; }
+
+        if (tookAction) {
+            let targetTile = gameMap[targetY] ? gameMap[targetY][targetX] : null;
+            
+            if (targetTile !== null && targetTile !== TILE.WALL) {
+                if (targetTile === TILE.DOOR_CLOSED) {
+                    gameMap[targetY][targetX] = TILE.DOOR_OPEN;
+                    document.getElementById('log').innerText = "🚪 You opened the door.";
+                    
+                } else if (targetTile === TILE.CHEST_CLOSED) {
+                    
+                    // INVENTORY CARRY WEIGHT LIMIT (STR)
+                    if (playerState.inventory.length >= playerState.stats.str) {
+                        document.getElementById('log').innerText = `🎒 Overburdened! Need more STR to carry this loot.`;
+                    } else {
+                        gameMap[targetY][targetX] = TILE.CHEST_OPEN;
+                        let foundGold = Math.floor(Math.random() * 25) + 5;
+                        let foundItem = LOOT_TABLE[Math.floor(Math.random() * LOOT_TABLE.length)];
+                        playerState.gold += foundGold;
+                        playerState.inventory.push(foundItem);
+                        document.getElementById('log').innerText = `🏆 Looted ${foundGold} Gold & ${foundItem}!`;
+                    }
+                    
+                } else if (targetTile === TILE.GOBLIN || targetTile === TILE.BAT) {
+                    
+                    // MELEE COMBAT (STR, DEX, CON)
+                    let enemyName = targetTile === TILE.GOBLIN ? "Goblin" : "Bat";
+                    
+                    let baseDmg = 1 + Math.floor(playerState.stats.str / 4);
+                    let isCrit = (Math.random() * 100) < playerState.stats.dex;
+                    let dealtDmg = isCrit ? baseDmg * 2 : baseDmg;
+                    
+                    let enemyAtk = Math.floor(Math.random() * 4) + 2; 
+                    let defense = Math.floor(playerState.stats.con / 5);
+                    let damageTaken = Math.max(0, enemyAtk - defense); 
+                    
+                    playerState.hp -= damageTaken;
+                    gameMap[targetY][targetX] = TILE.FLOOR; 
+                    
+                    if (playerState.hp <= 0) {
+                        playerState.hp = 0;
+                        document.getElementById('log').innerText = `💀 The ${enemyName} killed you! GAME OVER.`;
+                    } else {
+                        let critText = isCrit ? "CRITICAL HIT! " : "";
+                        document.getElementById('log').innerText = `⚔️ ${critText}Dealt ${dealtDmg} dmg. Took ${damageTaken} dmg (blocked ${defense}).`;
+                    }
+
+                } else if (targetTile === TILE.TRAP) {
+                    
+                    // TRAP TRIGGER
+                    let trapDmg = 4;
+                    playerState.hp -= trapDmg;
+                    gameMap[targetY][targetX] = TILE.FLOOR; // Trap broken
+                    playerPos.x = targetX;
+                    playerPos.y = targetY;
+                    document.getElementById('log').innerText = `💥 Stepped on a hidden trap! Took ${trapDmg} damage.`;
+
+                } else {
+                    playerPos.x = targetX;
+                    playerPos.y = targetY;
+                }
+            } else {
+                tookAction = false; 
+            }
+        }
+    }
+
+    if (tookAction && playerState.hp > 0) {
+        let regenChance = playerState.stats.wis * 0.015; 
+        if (Math.random() < regenChance) {
+            if (playerState.hp < playerState.maxHp) playerState.hp++;
+            if (playerState.mp < playerState.maxMp) playerState.mp++;
+        }
+        updateUI();
+        drawScene();
     }
 });
 
@@ -277,43 +477,44 @@ function generateMap() {
         gameMap.push(row);
     }
 
-    // Sprinkle some features into the room so we can look at them!
     gameMap[2][2] = TILE.STAIRS_UP;
-    gameMap[15][22] = TILE.STAIRS_DOWN;
+    playerPos = { x: 2, y: 2 };
 
-    // Create a little interior wall with doors
+    gameMap[15][15] = TILE.STAIRS_DOWN;
+
     for (let i = 4; i < 12; i++) gameMap[6][i] = TILE.WALL;
     gameMap[6][6] = TILE.DOOR_CLOSED;
     gameMap[6][9] = TILE.DOOR_BROKEN;
+
+    gameMap[4][5] = TILE.CHEST_CLOSED;
+    gameMap[4][10] = TILE.CHEST_CLOSED;
+
+    gameMap[8][12] = TILE.GOBLIN;
+    gameMap[5][14] = TILE.BAT;
+    
+    // Add traps directly to the map
+    gameMap[5][3] = TILE.TRAP;
+    gameMap[11][8] = TILE.TRAP;
 }
 
-// --- 6. RENDERING ENGINE ---
+// --- 7. RENDERING ENGINE ---
 function drawSprite(key, gridX, gridY) {
     const spr = SPRITE_MAP[key];
     if (!spr) return;
     
     gCtx.drawImage(
-        spriteSheet, 
-        spr.col * SHEET_GRID, 
-        spr.row * SHEET_GRID, 
-        SHEET_GRID,          
-        SHEET_GRID,         
-        gridX * GAME_TILE,    
-        gridY * GAME_TILE,    
-        GAME_TILE,            
-        GAME_TILE             
+        spriteSheet, spr.col * SHEET_GRID, spr.row * SHEET_GRID, SHEET_GRID, SHEET_GRID,         
+        gridX * GAME_TILE, gridY * GAME_TILE, GAME_TILE, GAME_TILE             
     );
 }
 
 function drawScene() {
     gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 
-    // 1. Draw Map Layer
     for (let y = 0; y < MAP_HEIGHT; y++) {
         for (let x = 0; x < MAP_WIDTH; x++) {
             let t = gameMap[y][x];
             
-            // Always draw a floor first so transparent items have a background
             if (t !== TILE.WALL) drawSprite('FLOOR', x, y);
             
             if (t === TILE.WALL) drawSprite('WALL', x, y);
@@ -322,70 +523,65 @@ function drawScene() {
             if (t === TILE.DOOR_CLOSED) drawSprite('DOOR_CLOSED', x, y);
             if (t === TILE.DOOR_OPEN) drawSprite('DOOR_OPEN', x, y);
             if (t === TILE.DOOR_BROKEN) drawSprite('DOOR_BROKEN', x, y);
+            if (t === TILE.CHEST_CLOSED) drawSprite('CHEST_CLOSED', x, y);
+            if (t === TILE.CHEST_OPEN) drawSprite('CHEST_OPEN', x, y);
+            if (t === TILE.GOBLIN) drawSprite('GOBLIN', x, y);
+            if (t === TILE.BAT) drawSprite('BAT', x, y);
+            
+            // TRAP VISIBILITY LOGIC (DEX)
+            if (t === TILE.TRAP) {
+                if (playerState.stats.dex >= 12) {
+                    drawSprite('TRAP', x, y); // Spotted!
+                } else {
+                    drawSprite('FLOOR', x, y); // Hidden...
+                }
+            }
         }
     }
 
-    // 2. Draw Entities Layer (Static for now)
-    drawSprite('CHEST_CLOSED', 5, 4);
-    drawSprite('CHEST_OPEN', 10, 4);
-    drawSprite('GOBLIN', 15, 8);
-    drawSprite('BAT', 18, 5);
-    
-    // 3. Draw Player Layer 
-    drawSprite('HERO', playerPos.x, playerPos.y); 
+    if (playerState.hp > 0) {
+        drawSprite('HERO', playerPos.x, playerPos.y); 
+    }
 }
 
-// --- 7. ALIGNMENT STUDIO LOGIC ---
+// --- 8. ALIGNMENT STUDIO LOGIC ---
 function setTarget(key, btn) {
     currentMappingTarget = key;
     if (activeBtn) activeBtn.classList.remove('active');
     btn.classList.add('active');
     activeBtn = btn;
-    document.getElementById('log').innerText = `Click on the grid to map: ${key}`;
 }
 
 sCanvas.addEventListener('click', (e) => {
     if (!currentMappingTarget) return;
-    
     const rect = sCanvas.getBoundingClientRect();
     const col = Math.floor(((e.clientX - rect.left) / 2) / SHEET_GRID);
     const row = Math.floor(((e.clientY - rect.top) / 2) / SHEET_GRID);
-
-    SPRITE_MAP[currentMappingTarget] = { col, row, w: 1, h: 1 };
-    document.getElementById('log').innerText = `✅ Mapped [${currentMappingTarget}] to Col: ${col}, Row: ${row}`;
-    
+    SPRITE_MAP[currentMappingTarget] = { col, row };
     renderStudioGrid(); 
     drawScene(); 
 });
 
 function renderStudioGrid() {
     sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
-    // Draw scaled up 2x so it's easy to see and click
     sCtx.imageSmoothingEnabled = false;
-    sCtx.drawImage(spriteSheet, 0, 0, 128 * 2, 96 * 2);
-    
-    const cols = 4;
-    const rows = 3;
-
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
+    sCtx.drawImage(spriteSheet, 0, 0, 128 * 2, 128 * 2); 
+    for (let r = 0; r < 4; r++) { // 4 rows
+        for (let c = 0; c < 4; c++) {
             sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-            sCtx.strokeRect(c * (SHEET_GRID*2), r * (SHEET_GRID*2), (SHEET_GRID*2), (SHEET_GRID*2));
-            
+            sCtx.strokeRect(c * 64, r * 64, 64, 64);
             for (let key in SPRITE_MAP) {
                 let spr = SPRITE_MAP[key];
                 if (spr && spr.col === c && spr.row === r) {
                     sCtx.strokeStyle = "#3b82f6";
                     sCtx.lineWidth = 2;
-                    sCtx.strokeRect(c * (SHEET_GRID*2), r * (SHEET_GRID*2), (SHEET_GRID*2), (SHEET_GRID*2));
-                    
+                    sCtx.strokeRect(c * 64, r * 64, 64, 64);
                     sCtx.lineWidth = 1;
                     sCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
-                    sCtx.fillRect(c * (SHEET_GRID*2), r * (SHEET_GRID*2), 24, 12);
+                    sCtx.fillRect(c * 64, r * 64, 24, 12);
                     sCtx.fillStyle = "#ffffff";
                     sCtx.font = "10px Arial";
-                    // Just showing the first 3 letters so it fits nicely
-                    sCtx.fillText(key.substring(0, 3), c * (SHEET_GRID*2) + 2, r * (SHEET_GRID*2) + 10);
+                    sCtx.fillText(key.substring(0, 3), c * 64 + 2, r * 64 + 10);
                 }
             }
         }
