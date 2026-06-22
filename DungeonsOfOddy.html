@@ -116,6 +116,7 @@
         <div style="position: relative; width: 800px; height: 576px;">
             <canvas id="gameCanvas" width="800" height="576" style="position: absolute; top:0; left:0; z-index: 1;"></canvas>
             
+            <!-- Game Over / Title Screen Interface Layer Component -->
             <div id="title-screen-overlay" style="position: absolute; top:0; left:0; width: 800px; height: 576px; background-color: #020617; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 3px solid #475569; border-radius: 6px; box-sizing: border-box;">
                 <h1 style="font-size: 42px; margin-bottom: 5px; color: #3b82f6; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);">DUNGEONS OF ODDY</h1>
                 <p style="color: #64748b; font-size: 14px; margin-top: 0; margin-bottom: 40px; font-style: italic; letter-spacing: 1px;">A Procedural Roguelike Sandbox Beta</p>
@@ -126,6 +127,7 @@
             </div>
         </div>
         
+        <!-- Main Sidebar Panel Interface Component -->
         <div class="panel">
             <div>
                 <div style="display: flex; gap: 8px; margin-bottom: 15px;">
@@ -140,6 +142,7 @@
                 <div class="stat-line">MP: <span id="mp-display" style="color: #3b82f6;">30 / 30</span></div>
                 <div class="stat-line">Turns Ticked: <span id="turn-display">0</span></div>
 
+                <!-- Core Progressive Stat Dynamic Sheet Attributes Frame Component -->
                 <div id="stat-sheet" style="font-size: 11px; line-height: 1.8; background:#1e293b; padding:10px; border-radius:6px; margin: 12px 0; border: 1px solid #334155;">
                     <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">Unspent Attributes Pool: <span id="stat-points-display">0</span></div>
                     
@@ -180,11 +183,13 @@
         </div>
     </div>
 
+    <!-- Carrying Bag Sub-Container Block Element -->
     <div class="panel" style="margin-top: 15px; width: 1140px; height: auto; flex-direction: row; align-items: center; gap: 15px; box-sizing: border-box;">
         <h3 style="margin:0; border:none; white-space: nowrap;">Carrying Bag:</h3>
         <div class="bag-grid" id="player-bag" style="flex-grow: 1;"></div>
     </div>
 
+    <!-- MASTER COORDINATE ALIGNMENT STUDIO PANEL -->
     <div id="mapper-studio">
         <h3 style="color: #3b82f6; margin-bottom: 5px;">🔧 Interactive Sprite Sheet Alignment Studio</h3>
         <p style="font-size: 12px; color: #94a3b8; margin-top: 0; margin-bottom: 15px;">
@@ -211,26 +216,26 @@
 
     <script>
         // --- CONSTANTS AND DICTIONARY SPECIFICATIONS ---
-        const SPRITE_SIZE = 16;  // The actual pixel size on the image sheet
-        const RENDER_SCALE = 2;  // Zooms the game in by 2x
-        const TILE_SIZE = SPRITE_SIZE * RENDER_SCALE; // The game grid is now 32x32 visually
+        const SPRITE_SIZE = 32;  // The actual pixel size on the image sheet
+        const RENDER_SCALE = 1;  // Zooms the game in (1 = 1:1 ratio for 32px)
+        const TILE_SIZE = SPRITE_SIZE * RENDER_SCALE; // The game grid is 32x32 visually
         const MAP_WIDTH = 25;
         const MAP_HEIGHT = 18;
-        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v4";
+        const SAVE_SLOT_KEY = "dungeons_of_oddy_save_v5";
 
         const TILE = { WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, CHEST: 3, STAIRS_DOWN: 4, STAIRS_UP: 5, DOOR_LOCKED: 6 };
 
-        // Master alignment mapping calibrated for the true 16x16 sprite scale
+        // Master alignment mapping calibrated for the true 32x32 sprite scale
         let SPRITE_MAP = {
-            WALL:        { col: 8,  row: 2 }, 
-            FLOOR:       { col: 24, row: 6 }, 
-            DOOR_CLOSED: { col: 22, row: 0 }, 
-            DOOR_LOCKED: { col: 24, row: 0 }, 
-            CHEST:       { col: 40, row: 0 }, 
-            STAIRS_UP:   { col: 24, row: 2 }, 
-            STAIRS_DOWN: { col: 26, row: 2 }, 
-            PLAYER:      { col: 0,  row: 8 }, 
-            GOBLIN:      { col: 12, row: 8 }  
+            WALL:        { col: 4,  row: 1 }, 
+            FLOOR:       { col: 12, row: 3 }, 
+            DOOR_CLOSED: { col: 11, row: 0 }, 
+            DOOR_LOCKED: { col: 12, row: 0 }, 
+            CHEST:       { col: 20, row: 0 }, 
+            STAIRS_UP:   { col: 12, row: 1 }, 
+            STAIRS_DOWN: { col: 13, row: 1 }, 
+            PLAYER:      { col: 0,  row: 4 }, 
+            GOBLIN:      { col: 6,  row: 4 }  
         };
 
         // --- ENGINE RUNTIME STATES ---
@@ -579,8 +584,9 @@
             sCtx.font = "8px monospace";
             sCtx.textAlign = "center";
             
-            for (let r = 0; r < 44; r++) {
-                for (let c = 0; c < 52; c++) {
+            // Adjust loop ranges for the 32x32 grid calculation (832 width / 32 = 26 cols, 704 height / 32 = 22 rows)
+            for (let r = 0; r < 22; r++) {
+                for (let c = 0; c < 26; c++) {
                     sCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
                     sCtx.strokeRect(c * SPRITE_SIZE, r * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
                     
