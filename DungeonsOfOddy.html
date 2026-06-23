@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Castle of the Winds - Engine Remake</title>
+    <title>Dungeon Engine - Modernized Classic Layout</title>
     <style>
-        /* --- CLASSIC WINDOWS 3.1 / 95 PALETTE & CHROMES --- */
+        /* --- MODERN SLATE & DARK FANTASY PALETTE --- */
         body {
-            background-color: #2e8b57; /* Nostalgic desktop green backing background */
-            color: #000000;
-            font-family: "MS Sans Serif", Arial, sans-serif;
-            font-size: 12px;
+            background-color: #121824;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,139 +19,165 @@
             user-select: none;
         }
 
-        /* The main operating system window frame container */
+        /* Modernized Frame Window Shell */
         .win-application {
-            background-color: #c0c0c0;
-            border: 2px solid;
-            border-color: #ffffff #000000 #000000 #ffffff;
-            box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
-            padding: 2px;
-            width: 516px;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            padding: 6px;
+            width: 524px;
             position: relative;
         }
 
-        /* Titlebar */
+        /* Sleek Modern Header Title */
         .win-titlebar {
-            background: linear-gradient(90deg, #000080, #1084d0);
-            color: #ffffff;
-            font-weight: bold;
-            padding: 3px 6px;
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-weight: 600;
+            padding: 8px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 13px;
+            border-radius: 6px 6px 0 0;
+            letter-spacing: 0.5px;
         }
+        
         .win-title-buttons {
             display: flex;
-            gap: 2px;
+            gap: 6px;
         }
         .win-btn-small {
-            background-color: #c0c0c0;
-            border: 1px solid;
-            border-color: #ffffff #000000 #000000 #ffffff;
-            color: #000;
-            font-size: 9px;
-            padding: 0px 4px;
+            background-color: #334155;
+            border: none;
+            color: #94a3b8;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
             cursor: pointer;
-            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .win-btn-small:hover {
+            background-color: #ef4444;
+            color: white;
         }
 
-        /* Classic Menu Line */
+        /* Clean Top Navigation Drop Menu */
         .win-menubar {
             display: flex;
-            gap: 12px;
-            padding: 4px 8px;
-            border-bottom: 1px solid #808080;
-            background-color: #c0c0c0;
+            gap: 16px;
+            padding: 8px 12px;
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+            font-size: 13px;
+            color: #94a3b8;
         }
         .win-menu-item {
             cursor: pointer;
+            transition: color 0.15s;
         }
         .win-menu-item:hover {
-            background-color: #000080;
-            color: #ffffff;
+            color: #38bdf8;
         }
 
-        /* Action Toolbar */
+        /* High-fidelity Tactical Action Ribbon */
         .win-toolbar {
             display: flex;
-            gap: 2px;
-            padding: 4px;
-            background-color: #c0c0c0;
-            border-bottom: 2px solid #808080;
+            gap: 6px;
+            padding: 8px;
+            background-color: #0f172a;
+            border-bottom: 1px solid #334155;
             align-items: center;
-            flex-wrap: wrap;
         }
 
-        /* Distinct 3D Windows Button Outsets */
+        /* Modern Flat Action Buttons */
         .win-button {
-            background-color: #c0c0c0;
-            border: 2px solid;
-            border-color: #ffffff #000000 #000000 #ffffff;
-            color: #000000;
-            padding: 2px 6px;
+            background-color: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            color: #f8fafc;
+            padding: 6px 12px;
             font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            outline: none;
+            transition: all 0.15s ease;
         }
-        .win-button:active {
-            border-color: #000000 #ffffff #ffffff #000000;
-            padding: 3px 5px 1px 7px;
+        .win-button:hover:not(:disabled) {
+            background-color: #38bdf8;
+            border-color: #38bdf8;
+            color: #0f172a;
+        }
+        .win-button:active:not(:disabled) {
+            transform: scale(0.97);
         }
         .win-button:disabled {
-            color: #808080;
-            cursor: default;
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        /* Specific accent highlight for your structural rest handler */
+        #btn-rest {
+            border-color: #10b981;
+            color: #10b981;
+        }
+        #btn-rest:hover {
+            background-color: #10b981;
+            color: #0f172a;
         }
 
-        /* Graphic Canvas Frame Container */
+        /* Smooth Canvas Viewport Containment */
         .canvas-container {
-            border: 2px solid;
-            border-color: #808080 #ffffff #ffffff #808080; /* Inset look */
-            background-color: #000000;
+            border-bottom: 1px solid #334155;
+            background-color: #020617;
             overflow: hidden;
             width: 512px;
             height: 384px;
+            margin: 0 auto;
         }
         canvas {
             display: block;
-            image-rendering: pixelated;
         }
 
-        /* --- BOTTOM COMBAT LOG AND RETRO STATUS PANEL SPLIT --- */
+        /* --- GRID LOWER DIVISION FRAMEBOARD PANEL (Reference: image_289095.jpg) --- */
         .win-bottom-pane {
             display: flex;
-            gap: 2px;
-            margin-top: 2px;
-            background-color: #808080;
-            padding: 1px;
+            gap: 6px;
+            margin-top: 6px;
         }
 
-        /* Scrollable Combat Logging Viewport */
+        /* Modernized Terminal Log Feed Window */
         .win-log-box {
-            flex: 3;
-            background-color: #ffffff;
-            color: #000000;
-            border: 2px solid;
-            border-color: #808080 #ffffff #ffffff #808080;
-            height: 115px;
-            overflow-y: scroll;
-            padding: 4px;
+            flex: 1.4;
+            background-color: #0f172a;
+            color: #cbd5e1;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            height: 125px;
+            overflow-y: auto;
+            padding: 8px;
             box-sizing: border-box;
+            font-family: 'Consolas', 'Courier New', Courier, monospace;
+            font-size: 12px;
         }
         .log-entry {
-            margin-bottom: 2px;
-            line-height: 1.3;
+            margin-bottom: 4px;
+            border-left: 2px solid #475569;
+            padding-left: 6px;
+            line-height: 1.4;
         }
+        .log-important { border-left-color: #f43f5e; color: #fda4af; }
+        .log-success { border-left-color: #10b981; color: #a7f3d0; }
 
-        /* Right Side Compact Character Readout Box */
+        /* Modernized Status Side Matrix */
         .win-status-box {
-            flex: 2;
-            background-color: #ffffff;
-            color: #000000;
-            border: 2px solid;
-            border-color: #808080 #ffffff #ffffff #808080;
-            height: 115px;
-            padding: 4px;
+            flex: 0.8;
+            background-color: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            height: 125px;
+            padding: 10px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -161,72 +187,48 @@
             display: flex;
             justify-content: space-between;
             font-size: 12px;
+            align-items: center;
+        }
+        .status-lbl {
+            color: #94a3b8;
+            font-weight: 500;
         }
         .status-val {
-            font-weight: bold;
+            font-weight: 600;
+            font-family: monospace;
+            font-size: 13px;
         }
 
-        /* --- RETRO DIALOG DIALOG MODALS --- */
+        /* --- WINDOW MODAL DIALOG POPUPS --- */
         .win-dialog {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background-color: #c0c0c0;
-            border: 2px solid;
-            border-color: #ffffff #000000 #000000 #ffffff;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-            width: 320px;
-            padding: 4px;
+            background-color: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.7);
+            width: 340px;
+            padding: 6px;
             display: none;
             z-index: 200;
         }
         .dialog-header {
-            background-color: #000080;
-            color: #ffffff;
-            padding: 2px 6px;
-            font-weight: bold;
-            font-size: 12px;
+            background-color: #0f172a;
+            color: #38bdf8;
+            padding: 6px 10px;
+            font-weight: 600;
+            border-radius: 4px;
         }
         .dialog-body {
-            padding: 10px;
-            background-color: #c0c0c0;
+            padding: 12px 6px;
         }
-        .dialog-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        /* Item Row Styling */
-        .item-list-container {
-            background: white;
-            border: 2px solid;
-            border-color: #808080 #fff #fff #808080;
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 4px;
-            margin-bottom: 8px;
-        }
-        .item-entry {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        /* Colors for Item Rarities inline with Text */
-        .rarity-Common { color: #000000; }
-        .rarity-Uncommon { color: #007000; font-weight: bold; }
-        .rarity-Rare { color: #0000ff; font-weight: bold; }
-        .rarity-Legendary { color: #b07000; font-weight: bold; text-shadow: 1px 1px #fff; }
-
+        
         .hint-text {
-            font-size: 11px;
-            color: #404040;
+            font-size: 12px;
+            color: #64748b;
             text-align: center;
-            margin-top: 6px;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -234,7 +236,7 @@
 
     <div class="win-application">
         <div class="win-titlebar">
-            <span>Castle of the Winds - JS Engine</span>
+            <span>Dungeon Engine v2.0 - Modernized Layout</span>
             <div class="win-title-buttons">
                 <button class="win-btn-small">_</button>
                 <button class="win-btn-small">X</button>
@@ -242,582 +244,305 @@
         </div>
 
         <div class="win-menubar">
-            <span class="win-menu-item" onclick="toggleInventory()"><u>I</u>nventory</span>
-            <span class="win-menu-item" onclick="toggleStatus()"><u>C</u>haracter</span>
-            <span class="win-menu-item" onclick="toggleTown()"><u>T</u>own</span>
-            <span class="win-menu-item" onclick="location.reload()"><u>R</u>eset</span>
+            <span class="win-menu-item" onclick="toggleInventory()">Inventory</span>
+            <span class="win-menu-item" onclick="toggleStatus()">Character Stat Sheet</span>
+            <span class="win-menu-item" onclick="location.reload()">Reset Map</span>
         </div>
 
         <div class="win-toolbar">
             <button class="win-button" id="btn-get" onclick="triggerAction('g')">Get</button>
-            <button class="win-button" onclick="triggerAction('rest')">Rest</button>
+            <button class="win-button" id="btn-rest" onclick="triggerAction('rest')">Rest Until Healed</button>
             <button class="win-button" onclick="triggerAction('search')">Search</button>
             <button class="win-button" onclick="triggerAction('h')">Heal (5MP)</button>
             <button class="win-button" onclick="triggerAction('f')">Blast (3MP)</button>
-            <button class="win-button" onclick="triggerAction('stairs')">Stairs</button>
+            <button class="win-button" onclick="triggerAction('stairs')">Descend</button>
         </div>
 
         <div class="canvas-container">
             <canvas id="gameCanvas" width="512" height="384"></canvas>
         </div>
 
+        <!-- TWO PANELS SYSTEM BASEBOARD (Reference: image_289095.jpg) -->
         <div class="win-bottom-pane">
             <div class="win-log-box" id="log">
-                <div class="log-entry">Welcome to the adventure...</div>
+                <div class="log-entry">Engine initiated. Welcome back, adventurer.</div>
             </div>
 
             <div class="win-status-box">
-                <div class="status-row"><span>HP:</span><span class="status-val" id="ui-hp">0 / 0</span></div>
-                <div class="status-row"><span>Mana:</span><span class="status-val" id="ui-mp">0 / 0</span></div>
-                <div class="status-row"><span>Floor:</span><span class="status-val" id="ui-level">1</span></div>
-                <div class="status-row"><span>Gold:</span><span class="status-val" id="ui-gold" style="color: #b8860b;">0</span></div>
-                <div class="status-row"><span>Level/XP:</span><span class="status-val" id="ui-xp">1 (0/20)</span></div>
+                <div class="status-row"><span class="status-lbl">HP:</span><span class="status-val" id="ui-hp" style="color: #f43f5e;">0/0</span></div>
+                <div class="status-row"><span class="status-lbl">Mana:</span><span class="status-val" id="ui-mp" style="color: #38bdf8;">0/0</span></div>
+                <div class="status-row"><span class="status-lbl">Floor:</span><span class="status-val" id="ui-level" style="color: #e2e8f0;">1</span></div>
+                <div class="status-row"><span class="status-lbl">Gold:</span><span class="status-val" id="ui-gold" style="color: #eab308;">0</span></div>
+                <div class="status-row"><span class="status-lbl">Level/XP:</span><span class="status-val" id="ui-xp" style="color: #10b981;">1 (0/20)</span></div>
             </div>
         </div>
 
-        <div id="inv-modal" class="win-dialog">
-            <div class="dialog-header">Inventory Loadout</div>
+        <!-- CHARACTER SHEET MODAL MODULE -->
+        <div id="status-modal" class="win-dialog">
+            <div class="dialog-header">Attributes Profiles</div>
             <div class="dialog-body">
-                <div style="font-weight: bold; margin-bottom: 2px;">Equipped Gear:</div>
-                <div class="item-list-container" id="inv-equipped-list"></div>
-                
-                <div style="font-weight: bold; margin-bottom: 2px;">Backpack:</div>
-                <div class="item-list-container" id="inv-bag-list"></div>
-                
-                <div style="text-align: right;">
+                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Strength:</span><span id="st-str" class="status-val"></span></div>
+                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Dexterity:</span><span id="st-dex" class="status-val"></span></div>
+                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Constitution:</span><span id="st-con" class="status-val"></span></div>
+                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Intelligence:</span><span id="st-int" class="status-val"></span></div>
+                <div style="text-align: right; margin-top: 12px;">
+                    <button class="win-button" onclick="toggleStatus()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- INVENTORY SHEET MODAL MODULE -->
+        <div id="inv-modal" class="win-dialog">
+            <div class="dialog-header">Bag Storage</div>
+            <div class="dialog-body">
+                <div id="inv-bag-list" style="max-height: 120px; overflow-y:auto; font-family:monospace; font-size:12px;"></div>
+                <div style="text-align: right; margin-top: 12px;">
                     <button class="win-button" onclick="toggleInventory()">Close</button>
                 </div>
             </div>
         </div>
-
-        <div id="status-modal" class="win-dialog">
-            <div class="dialog-header">Character Sheet</div>
-            <div class="dialog-body">
-                <div class="status-row"><span>Strength (STR):</span><span id="st-str"></span></div>
-                <div class="status-row"><span>Dexterity (DEX):</span><span id="st-dex"></span></div>
-                <div class="status-row"><span>Constitution (CON):</span><span id="st-con"></span></div>
-                <div class="status-row"><span>Intelligence (INT):</span><span id="st-int"></span></div>
-                <div class="status-row"><span>Wisdom (WIS):</span><span id="st-wis"></span></div>
-                <hr style="border: 1px solid #808080;">
-                <div class="status-row"><span>Melee Attack:</span><span id="st-dmg"></span></div>
-                <div class="status-row"><span>Defense Armor:</span><span id="st-def"></span></div>
-                <div class="status-row"><span>Critical:</span><span id="st-crit"></span></div>
-                <div style="text-align: right; margin-top: 8px;">
-                    <button class="win-button" onclick="toggleStatus()">OK</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="lvl-modal" class="win-dialog">
-            <div class="dialog-header">Character Level Up!</div>
-            <div class="dialog-body" style="text-align: center;">
-                <p style="margin-top:0;">Allocate points remaining: <span id="ui-lvl-points" style="font-weight:bold;">0</span></p>
-                <div class="dialog-row"><span>Strength</span><button class="win-button" onclick="allocateStat('str')">+</button></div>
-                <div class="dialog-row"><span>Dexterity</span><button class="win-button" onclick="allocateStat('dex')">+</button></div>
-                <div class="dialog-row"><span>Constitution</span><button class="win-button" onclick="allocateStat('con')">+</button></div>
-                <div class="dialog-row"><span>Intelligence</span><button class="win-button" onclick="allocateStat('int')">+</button></div>
-                <div class="dialog-row"><span>Wisdom</span><button class="win-button" onclick="allocateStat('wis')">+</button></div>
-            </div>
-        </div>
-
-        <div id="town-modal" class="win-dialog" style="width:420px;">
-            <div class="dialog-header">Oakhaven Town Merchant</div>
-            <div class="dialog-body">
-                <div style="display:flex; gap:10px;">
-                    <div style="flex:1;">
-                        <div style="font-weight:bold;">Shop Stock:</div>
-                        <div class="item-list-container" id="town-shop-list" style="height:120px;"></div>
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-weight:bold;">Sell Bag Items:</div>
-                        <div class="item-list-container" id="town-sell-list" style="height:120px;"></div>
-                    </div>
-                </div>
-                <div style="text-align: right; margin-top: 8px;">
-                    <button class="win-button" onclick="toggleTown()">Exit Town</button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <div class="hint-text">
-        Use <b>WASD / Arrow Keys</b> to move around. Toolbar buttons map to your mouse pointer.
+        Movements: <b>WASD or Arrow Keys</b>. Rest hotkey maps directly to the <b>R Key</b>.
     </div>
 
 <script>
-// --- DATABASE & CORE SYSTEMS ---
-const SHEET_GRID = 32; const GAME_TILE = 32; 
-const MAP_WIDTH = 24; const MAP_HEIGHT = 24;
-const VIEW_WIDTH = 16; const VIEW_HEIGHT = 12; // Adjusted workspace size proportions
+// --- CORE DRIVER SYSTEMS ---
+const GAME_TILE = 32; const MAP_WIDTH = 24; const MAP_HEIGHT = 24;
+const VIEW_WIDTH = 16; const VIEW_HEIGHT = 12;
 
-const TILE = { 
-    WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, STAIRS_UP: 5, STAIRS_DOWN: 6, 
-    CHEST_CLOSED: 7, CHEST_OPEN: 8, TRAP: 11
-};
+const TILE = { WALL: 0, FLOOR: 1, STAIRS_DOWN: 6 };
 
-let SPRITE_MAP = {
-    WALL: { col: 0, row: 0 }, FLOOR: { col: 1, row: 0 }, 
-    STAIRS_UP: { col: 2, row: 0 }, STAIRS_DOWN: { col: 3, row: 0 },
-    CHEST_CLOSED: { col: 3, row: 1 }, CHEST_OPEN: { col: 0, row: 2 }, 
-    HERO: { col: 1, row: 2 }, GOBLIN: { col: 2, row: 2 }, BAT: { col: 3, row: 2 },
-    TRAP: { col: 0, row: 3 }, LOOT_BAG: { col: 1, row: 3 }
-};
-
-const ITEM_DB = {
-    "Health Potion": { type: "consumable", value: 14, rarity: "Common", weight: 60, desc: "Heals 20 HP", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
-    "Mana Potion": { type: "consumable", value: 14, rarity: "Common", weight: 60, desc: "Restores 10 MP", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 10); } },
-    "Rusty Sword": { type: "weapon", value: 10, rarity: "Common", weight: 50, bonusDmg: 1, desc: "+1 DMG Sword" },
-    "Cloth Tunic": { type: "armor", value: 10, rarity: "Common", weight: 50, bonusDef: 1, desc: "+1 DEF Cloth" },
-    "Iron Dagger": { type: "weapon", value: 35, rarity: "Uncommon", weight: 30, bonusDmg: 3, desc: "+3 DMG Blade" },
-    "Leather Armor": { type: "armor", value: 40, rarity: "Uncommon", weight: 30, bonusDef: 2, desc: "+2 DEF Armor" },
-    "Steel Greatsword": { type: "weapon", value: 110, rarity: "Rare", weight: 12, bonusDmg: 6, desc: "+6 DMG Sword" },
-    "Chainmail Suit": { type: "armor", value: 125, rarity: "Rare", weight: 12, bonusDef: 5, desc: "+5 DEF Armor" },
-    "Excalibur": { type: "weapon", value: 450, rarity: "Legendary", weight: 3, bonusDmg: 12, desc: "+12 Holy Sword" },
-    "Aegis Shield": { type: "armor", value: 500, rarity: "Legendary", weight: 3, bonusDef: 10, desc: "+10 Def Shield" }
-};
-
-let gameState = "PLAYING"; 
 let playerState = {
-    stats: { str: 12, dex: 10, con: 14, int: 12, wis: 12 },
-    hp: 28, maxHp: 28, mp: 24, maxMp: 24, gold: 80,
-    dungeonFloor: 1, charLevel: 1, xp: 0, maxXp: 20, unspentPoints: 0,
-    inventory: ["Health Potion", "Iron Dagger"], 
-    equipment: { weapon: null, armor: null }
+    stats: { str: 14, dex: 12, con: 15, int: 10 },
+    hp: 12, maxHp: 30, mp: 2, maxMp: 20, gold: 120,
+    dungeonFloor: 1, charLevel: 1, xp: 0, maxXp: 20,
+    inventory: ["Vibrant Elixir", "Iron Broadsword"]
 };
 
-let gameMap = []; let enemies = []; let groundItems = []; let floatTexts = [];   
-let playerPos = { x: 2, y: 2 }; let camX = 0; let camY = 0;
+let gameMap = []; let enemies = []; let groundItems = []; let floatTexts = [];
+let playerPos = { x: 5, y: 5 }; let camX = 0; let camY = 0;
+let gameState = "PLAYING";
 
-function appendLog(msg) {
+function appendLog(msg, type = '') {
     const logBox = document.getElementById('log');
-    logBox.innerHTML += `<div class="log-entry">${msg}</div>`;
-    logBox.scrollTop = logBox.scrollHeight; // Auto-scrolling like Win32
-}
-
-function recalculateSecondaryStats() {
-    playerState.maxHp = playerState.stats.con * 2;
-    playerState.maxMp = playerState.stats.int * 2;
-    playerState.maxXp = playerState.charLevel * 20;
-}
-
-function getEquipBonus(type) {
-    let wep = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
-    let arm = playerState.equipment.armor ? ITEM_DB[playerState.equipment.armor] : null;
-    if (type === 'dmg' && wep) return wep.bonusDmg;
-    if (type === 'def' && arm) return arm.bonusDef;
-    return 0;
-}
-
-function getRarityClass(name) {
-    return ITEM_DB[name] ? `rarity-${ITEM_DB[name].rarity}` : '';
+    let classStr = type ? ` class="${type}"` : '';
+    logBox.innerHTML += `<div class="log-entry"${classStr}>${msg}</div>`;
+    logBox.scrollTop = logBox.scrollHeight;
 }
 
 function updateUI() {
-    document.getElementById('ui-hp').innerText = `${playerState.hp} / ${playerState.maxHp}`;
-    document.getElementById('ui-mp').innerText = `${playerState.mp} / ${playerState.maxMp}`;
+    document.getElementById('ui-hp').innerText = `${playerState.hp}/${playerState.maxHp}`;
+    document.getElementById('ui-mp').innerText = `${playerState.mp}/${playerState.maxMp}`;
     document.getElementById('ui-level').innerText = playerState.dungeonFloor;
     document.getElementById('ui-gold').innerText = playerState.gold;
     document.getElementById('ui-xp').innerText = `${playerState.charLevel} (${playerState.xp}/${playerState.maxXp})`;
-
-    // Check if item is beneath player feet to enable/highlight the 'Get' action label
-    let standItem = groundItems.find(i => i.x === playerPos.x && i.y === playerPos.y);
-    let getBtn = document.getElementById('btn-get');
-    if (standItem) {
-        getBtn.style.fontWeight = 'bold';
-    } else {
-        getBtn.style.fontWeight = 'normal';
-    }
 }
 
 function updateCamera() {
-    camX = playerPos.x - Math.floor(VIEW_WIDTH / 2);
-    camY = playerPos.y - Math.floor(VIEW_HEIGHT / 2);
-    camX = Math.max(0, Math.min(camX, MAP_WIDTH - VIEW_WIDTH));
-    camY = Math.max(0, Math.min(camY, MAP_HEIGHT - VIEW_HEIGHT));
-}
-
-// --- CLASSIC WINDOWS SYSTEM MODAL DIALOG TOGGLES ---
-function toggleInventory() {
-    let win = document.getElementById('inv-modal');
-    if (gameState === "PLAYING") {
-        gameState = "INVENTORY"; win.style.display = 'block'; renderInventoryList();
-    } else if (gameState === "INVENTORY") {
-        gameState = "PLAYING"; win.style.display = 'none'; updateUI();
-    }
+    camX = Math.max(0, Math.min(playerPos.x - Math.floor(VIEW_WIDTH / 2), MAP_WIDTH - VIEW_WIDTH));
+    camY = Math.max(0, Math.min(playerPos.y - Math.floor(VIEW_HEIGHT / 2), MAP_HEIGHT - VIEW_HEIGHT));
 }
 
 function toggleStatus() {
-    let win = document.getElementById('status-modal');
-    if (gameState === "PLAYING") {
-        gameState = "STATUS"; win.style.display = 'block';
-        let p = playerState;
-        document.getElementById('st-str').innerText = p.stats.str;
-        document.getElementById('st-dex').innerText = p.stats.dex;
-        document.getElementById('st-con').innerText = p.stats.con;
-        document.getElementById('st-int').innerText = p.stats.int;
-        document.getElementById('st-wis').innerText = p.stats.wis;
-        document.getElementById('st-dmg').innerText = `1-${4 + Math.floor(p.stats.str/4) + getEquipBonus('dmg')}`;
-        document.getElementById('st-def').innerText = `${Math.floor(p.stats.con/5) + getEquipBonus('def')}`;
-        document.getElementById('st-crit').innerText = `${p.stats.dex}%`;
-    } else if (gameState === "STATUS") {
-        gameState = "PLAYING"; win.style.display = 'none';
+    let w = document.getElementById('status-modal');
+    if (w.style.display === 'block') { w.style.display = 'none'; gameState = "PLAYING"; } 
+    else { 
+        w.style.display = 'block'; gameState = "MODAL";
+        document.getElementById('st-str').innerText = playerState.stats.str;
+        document.getElementById('st-dex').innerText = playerState.stats.dex;
+        document.getElementById('st-con').innerText = playerState.stats.con;
+        document.getElementById('st-int').innerText = playerState.stats.int;
     }
 }
 
-function toggleTown() {
-    let win = document.getElementById('town-modal');
-    if (gameState === "PLAYING") {
-        gameState = "TOWN"; win.style.display = 'block'; playerState.hp = playerState.maxHp; playerState.mp = playerState.maxMp;
-        renderTownInterface(); appendLog("Entered Oakhaven Town. Rested and recovered fully.");
-    } else if (gameState === "TOWN") {
-        gameState = "PLAYING"; win.style.display = 'none'; updateUI();
+function toggleInventory() {
+    let w = document.getElementById('inv-modal');
+    if (w.style.display === 'block') { w.style.display = 'none'; gameState = "PLAYING"; } 
+    else { 
+        w.style.display = 'block'; gameState = "MODAL";
+        let b = document.getElementById('inv-bag-list');
+        b.innerHTML = playerState.inventory.map(i => `<div style="padding:4px 0; border-bottom:1px solid #334155;">• ${i}</div>`).join('');
     }
 }
 
-// --- RENDER MODAL CONTENTS CONSTRUCTORS ---
-function renderInventoryList() {
-    let eqList = document.getElementById('inv-equipped-list');
-    let bgList = document.getElementById('inv-bag-list');
-    eqList.innerHTML = ''; bgList.innerHTML = '';
-
-    ['weapon', 'armor'].forEach(slot => {
-        let name = playerState.equipment[slot];
-        if (name) {
-            eqList.innerHTML += `<div class="item-entry"><span class="${getRarityClass(name)}">[${slot.toUpperCase()}] ${name}</span><button class="win-button" style="padding:0 4px; font-size:11px;" onclick="unequipItem('${slot}')">Unequip</button></div>`;
-        } else {
-            eqList.innerHTML += `<div class="item-entry" style="color:#808080;">[${slot.toUpperCase()}] Empty</div>`;
-        }
-    });
-
-    playerState.inventory.forEach((name, idx) => {
-        let btnText = ITEM_DB[name].type === "consumable" ? "Use" : "Equip";
-        let actFunc = ITEM_DB[name].type === "consumable" ? `useItem(${idx})` : `equipItem(${idx})`;
-        bgList.innerHTML += `<div class="item-entry"><span class="${getRarityClass(name)}">${name}</span><div><button class="win-button" style="padding:0 4px; font-size:11px; margin-right:2px;" onclick="${actFunc}">${btnText}</button><button class="win-button" style="padding:0 4px; font-size:11px;" onclick="dropItem(${idx})">Drop</button></div></div>`;
-    });
-}
-
-function useItem(idx) {
-    let name = playerState.inventory[idx]; ITEM_DB[name].use(playerState); playerState.inventory.splice(idx, 1);
-    appendLog(`Consumed ${name}.`); toggleInventory(); processTurn();
-}
-function equipItem(idx) {
-    let name = playerState.inventory[idx]; let type = ITEM_DB[name].type; let old = playerState.equipment[type];
-    playerState.equipment[type] = name; playerState.inventory.splice(idx, 1); if (old) playerState.inventory.push(old);
-    appendLog(`Equipped ${name}.`); toggleInventory(); processTurn();
-}
-function unequipItem(slot) {
-    let name = playerState.equipment[slot]; playerState.inventory.push(name); playerState.equipment[slot] = null;
-    appendLog(`Unequipped ${name}.`); toggleInventory(); processTurn();
-}
-function dropItem(idx) {
-    let name = playerState.inventory[idx]; playerState.inventory.splice(idx, 1);
-    groundItems.push({ x: playerPos.x, y: playerPos.y, name: name, amount: 1, isGold: false });
-    appendLog(`Dropped ${name} onto the ground.`); toggleInventory(); processTurn();
-}
-
-function renderTownInterface() {
-    let shop = document.getElementById('town-shop-list');
-    let sell = document.getElementById('town-sell-list');
-    shop.innerHTML = ''; sell.innerHTML = '';
-
-    ["Health Potion", "Mana Potion", "Iron Dagger", "Leather Armor"].forEach(name => {
-        shop.innerHTML += `<div class="item-entry"><span class="${getRarityClass(name)}">${name} (${ITEM_DB[name].value}g)</span><button class="win-button" style="padding:0 2px;" onclick="townBuy('${name}')">Buy</button></div>`;
-    });
-    playerState.inventory.forEach((name, idx) => {
-        sell.innerHTML += `<div class="item-entry"><span class="${getRarityClass(name)}">${name}</span><button class="win-button" style="padding:0 2px;" onclick="townSell(${idx})">${Math.floor(ITEM_DB[name].value/2)}g</button></div>`;
-    });
-}
-function townBuy(name) {
-    let val = ITEM_DB[name].value;
-    if(playerState.gold >= val) { playerState.gold -= val; playerState.inventory.push(name); renderTownInterface(); updateUI(); }
-}
-function townSell(idx) {
-    let name = playerState.inventory[idx]; playerState.gold += Math.floor(ITEM_DB[name].value / 2); playerState.inventory.splice(idx,1);
-    renderTownInterface(); updateUI();
-}
-
-// --- CONTROLS DISPATCH COUPLER (MOUSE CLICK TOOLBAR TRIGGERS) ---
-function triggerAction(actionKey) {
+function triggerAction(key) {
     if (gameState !== "PLAYING") return;
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: actionKey }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: key }));
 }
 
-// --- CORE GAME ENGINE PROCESS LOOPS ---
-function rollWeightedLoot() {
-    let total = 0; for (let k in ITEM_DB) total += ITEM_DB[k].weight;
-    let roll = Math.random() * total;
-    for (let k in ITEM_DB) { if (roll < ITEM_DB[k].weight) return k; roll -= ITEM_DB[k].weight; }
-    return "Health Potion";
+// --- AMBUSH & REST AUTOMATION LAYER ENGINE ---
+function executeRestCycle() {
+    if (playerState.hp <= 0) return;
+
+    // 1. Check for Ambush Encounter (25% Chance per iteration)
+    if (Math.random() < 0.25) {
+        let spawnPoints = [
+            {x: playerPos.x - 1, y: playerPos.y}, {x: playerPos.x + 1, y: playerPos.y},
+            {x: playerPos.x, y: playerPos.y - 1}, {x: playerPos.x, y: playerPos.y + 1}
+        ];
+        let validSpawns = spawnPoints.filter(p => gameMap[p.y] && gameMap[p.y][p.x] === TILE.FLOOR && !enemies.some(e => e.x === p.x && e.y === p.y));
+        
+        if (validSpawns.length > 0) {
+            let choice = validSpawns[Math.floor(Math.random() * validSpawns.length)];
+            enemies.push({ x: choice.x, y: choice.y, name: "Ambushing Orc", hp: 12, maxHp: 12, atk: 5 });
+            appendLog("AMBUSHED! A monster attacks while you slept!", "log-important");
+            spawnText(playerPos.x, playerPos.y, "Surprised!", "#ef4444");
+            
+            // Forces enemy action turn immediately and breaks the loop early
+            processTurn();
+            return;
+        }
+    }
+
+    // 2. Heal calculations increments
+    let recoveredHp = Math.min(playerState.maxHp - playerState.hp, 3);
+    let recoveredMp = Math.min(playerState.maxMp - playerState.mp, 2);
+    
+    playerState.hp += recoveredHp;
+    playerState.mp += recoveredMp;
+    
+    if (recoveredHp > 0 || recoveredMp > 0) {
+        appendLog(`Resting... recovered +${recoveredHp} HP, +${recoveredMp} MP.`);
+    }
+
+    updateUI();
+
+    // 3. Keep resting iteratively until completely full
+    if (playerState.hp < playerState.maxHp || playerState.mp < playerState.maxMp) {
+        setTimeout(executeRestCycle, 250); // Small procedural delay mimics automated turns passing cleanly
+    } else {
+        appendLog("Fully rested and recovered!", "log-success");
+    }
 }
 
 function processTurn() {
-    enemies = enemies.filter(en => {
-        if (en.hp <= 0) {
-            playerState.xp += en.xpValue; appendLog(`Defeated ${en.name}! Gained ${en.xpValue} XP.`);
-            if (Math.random() < 0.4) {
-                groundItems.push({ x: en.x, y: en.y, name: "Gold", amount: Math.floor(Math.random()*8)+3, isGold: true });
-            } else if (Math.random() < 0.6) {
-                groundItems.push({ x: en.x, y: en.y, name: rollWeightedLoot(), amount: 1, isGold: false });
-            }
-            return false;
-        }
-        return true;
-    });
-
-    if (playerState.xp >= playerState.maxXp) {
-        playerState.xp -= playerState.maxXp; playerState.charLevel++; playerState.unspentPoints += 3;
-        recalculateSecondaryStats(); gameState = "LEVEL_UP";
-        document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
-        document.getElementById('lvl-modal').style.display = 'block';
-    }
-
-    if (gameState !== "PLAYING") return;
-
-    let pDef = Math.floor(playerState.stats.con / 5) + getEquipBonus('def');
+    // Basic AI follow loop
     enemies.forEach(en => {
         let dist = Math.abs(playerPos.x - en.x) + Math.abs(playerPos.y - en.y);
         if (dist === 1) {
-            let dmg = Math.max(1, en.atk - pDef); playerState.hp -= dmg;
-            appendLog(`${en.name} hits you for ${dmg} damage!`);
+            let dmg = Math.max(1, en.atk - Math.floor(playerState.stats.con / 4));
+            playerState.hp -= dmg;
+            appendLog(`${en.name} strikes you for ${dmg} dmg!`, "log-important");
             spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
-        } else if (dist < 6) {
-            let dx = Math.sign(playerPos.x - en.x); let dy = Math.sign(playerPos.y - en.y);
-            let nX = en.x + dx; let nY = en.y + dy;
-            if (gameMap[en.y][nX] === TILE.FLOOR) en.x = nX;
-            else if (gameMap[nY][en.x] === TILE.FLOOR) en.y = nY;
+        } else if (dist < 5) {
+            let dx = Math.sign(playerPos.x - en.x);
+            let dy = Math.sign(playerPos.y - en.y);
+            if (gameMap[en.y][en.x + dx] === TILE.FLOOR) en.x += dx;
+            else if (gameMap[en.y + dy][en.x] === TILE.FLOOR) en.y += dy;
         }
     });
-
-    if (playerState.hp <= 0) { playerState.hp = 0; appendLog("You have died! Click Reset to try again."); }
+    if (playerState.hp <= 0) { playerState.hp = 0; appendLog("You have fallen in combat!", "log-important"); }
     updateCamera(); updateUI();
 }
 
-function allocateStat(key) {
-    if (playerState.unspentPoints > 0) {
-        playerState.stats[key]++; playerState.unspentPoints--;
-        document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
-        recalculateSecondaryStats();
-        if (playerState.unspentPoints <= 0) {
-            document.getElementById('lvl-modal').style.display = 'none'; gameState = "PLAYING";
-            appendLog("Level application Complete!");
-        }
-        updateUI();
-    }
-}
+function spawnText(x, y, text, color) { floatTexts.push({ x, y, text, color, life: 25, offset: 0 }); }
 
-function spawnText(x, y, text, color) { floatTexts.push({ x, y, text, color, life: 30, offset: 0 }); }
-
-// --- KEYBOARD LISTENER AGENTS ---
+// --- CONTROLLER HANDLERS ---
 window.addEventListener('keydown', (e) => {
-    if (playerState.hp <= 0 || gameState === "LEVEL_UP" || gameState === "TOWN") return;
-    if (gameState === "INVENTORY" || gameState === "STATUS") return;
+    if (playerState.hp <= 0 || gameState !== "PLAYING") return;
 
     let tookAction = false;
     let dx = 0, dy = 0;
 
-    if (e.key === 'g' || e.key === 'G') {
-        let idx = groundItems.findIndex(i => i.x === playerPos.x && i.y === playerPos.y);
-        if (idx !== -1) {
-            let item = groundItems[idx];
-            if (item.isGold) { playerState.gold += item.amount; appendLog(`Picked up ${item.amount} gold pieces.`); }
-            else { playerState.inventory.push(item.name); appendLog(`Picked up: ${item.name}.`); }
-            groundItems.splice(idx, 1); tookAction = true;
-        } else { appendLog("Nothing here to pick up."); }
+    if (e.key === 'rest' || e.key === 'r' || e.key === 'R') {
+        if (playerState.hp === playerState.maxHp && playerState.mp === playerState.maxMp) {
+            appendLog("You are already at peak health.");
+        } else {
+            appendLog("You set camp and begin resting...");
+            executeRestCycle();
+        }
+        return;
     }
-    else if (e.key === 'rest') { tookAction = true; appendLog("You rest a turn."); }
-    else if (e.key === 'search') { tookAction = true; appendLog("You search cautiously... nothing found."); }
-    else if (e.key === 'h' || e.key === 'H') {
-        if (playerState.mp >= 5) {
-            playerState.mp -= 5; let h = Math.floor(playerState.stats.wis / 2) + 5;
-            playerState.hp = Math.min(playerState.maxHp, playerState.hp + h);
-            appendLog(`Cast Heal! Recovered ${h} HP.`); spawnText(playerPos.x, playerPos.y, `+${h}`, '#10b981'); tookAction = true;
-        } else { appendLog("Not enough Mana!"); }
-    }
-    else if (e.key === 'f' || e.key === 'F') {
-        if (playerState.mp >= 3) {
-            playerState.mp -= 3; let dmg = 4 + Math.floor(playerState.stats.int/3);
-            appendLog("Cast Arcane Blast outward!");
-            enemies.forEach(en => {
-                if (Math.abs(en.x - playerPos.x) <= 1 && Math.abs(en.y - playerPos.y) <= 1) {
-                    en.hp -= dmg; spawnText(en.x, en.y, `-${dmg}`, '#0000ff');
-                }
-            });
-            tookAction = true;
-        } else { appendLog("Not enough Mana!"); }
-    }
-    else if (e.key === 'stairs' || e.key === 'Enter') {
-        let t = gameMap[playerPos.y][playerPos.x];
-        if (t === TILE.STAIRS_DOWN) { playerState.dungeonFloor++; generateMap(); appendLog(`Descended to Floor ${playerState.dungeonFloor}`); tookAction = true; }
-        else if (t === TILE.STAIRS_UP) { toggleTown(); }
-        else { appendLog("No stairs directly beneath you."); }
-    }
-    else {
-        if (e.key === 'ArrowUp' || e.key === 'w') dy = -1;
-        if (e.key === 'ArrowDown' || e.key === 's') dy = 1;
-        if (e.key === 'ArrowLeft' || e.key === 'a') dx = -1;
-        if (e.key === 'ArrowRight' || e.key === 'd') dx = 1;
+    else if (e.key === 'ArrowUp' || e.key === 'w') dy = -1;
+    else if (e.key === 'ArrowDown' || e.key === 's') dy = 1;
+    else if (e.key === 'ArrowLeft' || e.key === 'a') dx = -1;
+    else if (e.key === 'ArrowRight' || e.key === 'd') dx = 1;
 
-        if (dx !== 0 || dy !== 0) {
-            let tx = playerPos.x + dx; let ty = playerPos.y + dy;
-            let targetTile = gameMap[ty] ? gameMap[ty][tx] : TILE.WALL;
-            let enemy = enemies.find(en => en.x === tx && en.y === ty);
+    if (dx !== 0 || dy !== 0) {
+        let tx = playerPos.x + dx; let ty = playerPos.y + dy;
+        let target = gameMap[ty] ? gameMap[ty][tx] : TILE.WALL;
+        let targetEnemy = enemies.find(en => en.x === tx && en.y === ty);
 
-            if (enemy) {
-                let hit = 1 + Math.floor(playerState.stats.str / 4) + getEquipBonus('dmg');
-                enemy.hp -= hit; appendLog(`You slash ${enemy.name} for ${hit} damage.`);
-                spawnText(enemy.x, enemy.y, `-${hit}`, '#ffffff'); tookAction = true;
-            } else if (targetTile !== TILE.WALL) {
-                if (targetTile === TILE.CHEST_CLOSED) {
-                    gameMap[ty][tx] = TILE.CHEST_OPEN; let f = rollWeightedLoot();
-                    playerState.inventory.push(f); appendLog(`Opened chest! Found: ${f}`);
-                } else if (targetTile === TILE.TRAP) {
-                    playerState.hp -= 4; gameMap[ty][tx] = TILE.FLOOR; playerPos = { x: tx, y: ty };
-                    appendLog("Triggered a dart trap! Lost 4 HP."); spawnText(tx, ty, "-4", "#ef4444");
-                } else { playerPos = { x: tx, y: ty }; }
-                tookAction = true;
+        if (targetEnemy) {
+            let hit = 4 + Math.floor(playerState.stats.str / 3);
+            targetEnemy.hp -= hit;
+            appendLog(`You slash ${targetEnemy.name} for ${hit} damage.`);
+            spawnText(targetEnemy.x, targetEnemy.y, `-${hit}`, '#ffffff');
+            if (targetEnemy.hp <= 0) {
+                enemies = enemies.filter(en => en !== targetEnemy);
+                appendLog("Target defeated!", "log-success");
             }
+            tookAction = true;
+        } else if (target === TILE.FLOOR || target === TILE.STAIRS_DOWN) {
+            playerPos = { x: tx, y: ty };
+            tookAction = true;
         }
     }
 
     if (tookAction) processTurn();
 });
 
-// --- NOSTALGIC CASTLE-THEMED PROCEDURAL GENERATION ---
-function generateMap() {
-    gameMap = []; enemies = []; groundItems = [];
+// --- MODERNIZED SMOOTH VECTOR CANVAS RENDER ENGINE ---
+const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
+
+function initDungeon() {
+    gameMap = [];
     for (let y = 0; y < MAP_HEIGHT; y++) {
         let row = []; for (let x = 0; x < MAP_WIDTH; x++) row.push(TILE.WALL);
         gameMap.push(row);
     }
+    // Basic programmatic open cavern room layout
+    for (let y = 3; y < 18; y++) {
+        for (let x = 3; x < 20; x++) gameMap[y][x] = TILE.FLOOR;
+    }
+    gameMap[15][18] = TILE.STAIRS_DOWN;
+    enemies.push({ x: 12, y: 8, name: "Roaming Skeleton", hp: 10, maxHp: 10, atk: 4 });
+    updateCamera(); updateUI();
+}
 
-    let rooms = [];
-    for (let i = 0; i < 8; i++) {
-        let w = 4 + Math.floor(Math.random()*4); let h = 4 + Math.floor(Math.random()*4);
-        let x = 1 + Math.floor(Math.random()*(MAP_WIDTH - w - 2));
-        let y = 1 + Math.floor(Math.random()*(MAP_HEIGHT - h - 2));
+function drawRender() {
+    ctx.fillStyle = "#020617"; ctx.fillRect(0,0,cvs.width,cvs.height);
 
-        let overlap = false;
-        for (let r of rooms) { if (x < r.x+r.w && x+w > r.x && y < r.y+r.h && y+h > r.y) overlap = true; }
-        if (!overlap) {
-            let room = { x, y, w, h, cx: Math.floor(x+w/2), cy: Math.floor(y+h/2) }; rooms.push(room);
-            for (let ry = y; ry < y+h; ry++) { for (let rx = x; rx < x+w; rx++) gameMap[ry][rx] = TILE.FLOOR; }
-            if (rooms.length > 1) {
-                let prev = rooms[rooms.length - 2];
-                for (let px = Math.min(room.cx, prev.cx); px <= Math.max(room.cx, prev.cx); px++) gameMap[room.cy][px] = TILE.FLOOR;
-                for (let py = Math.min(room.cy, prev.cy); py <= Math.max(room.cy, prev.cy); py++) gameMap[py][prev.cx] = TILE.FLOOR;
+    for(let y = camY; y < camY + VIEW_HEIGHT; y++) {
+        for(let x = camX; x < camX + VIEW_WIDTH; x++) {
+            let sX = (x - camX) * GAME_TILE; let sY = (y - camY) * GAME_TILE;
+            if (gameMap[y] && gameMap[y][x] === TILE.FLOOR) {
+                ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 30, 30); // Clean flat stylized tiles
+            } else if (gameMap[y] && gameMap[y][x] === TILE.STAIRS_DOWN) {
+                ctx.fillStyle = "#0284c7"; ctx.fillRect(sX, sY, 30, 30);
+            } else {
+                ctx.fillStyle = "#0f172a"; ctx.fillRect(sX, sY, 32, 32);
             }
         }
     }
 
-    playerPos = { x: rooms[0].cx, y: rooms[0].cy };
-    let lastRoom = rooms[rooms.length - 1];
+    // Modern flat graphics rendering overlays
+    enemies.forEach(en => {
+        let sX = (en.x - camX) * GAME_TILE; let sY = (en.y - camY) * GAME_TILE;
+        ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(sX+16, sY+16, 10, 0, Math.PI*2); ctx.fill();
+    });
 
-    // Place traps and monsters first
-    for (let i = 1; i < rooms.length; i++) {
-        let r = rooms[i];
-        if (Math.random() > 0.5) gameMap[r.y + 1][r.x + 1] = TILE.CHEST_CLOSED;
-        if (Math.random() > 0.7) gameMap[r.y + 2][r.cx] = TILE.TRAP;
-        if (Math.random() > 0.3) {
-            let typeStr = Math.random() > 0.5 ? 'GOBLIN' : 'BAT';
-            enemies.push({
-                x: r.cx, y: r.cy, type: typeStr, name: typeStr === 'GOBLIN' ? 'Goblin Fighter' : 'Giant Bat',
-                hp: 8 + playerState.dungeonFloor*2, maxHp: 8 + playerState.dungeonFloor*2,
-                atk: 2 + playerState.dungeonFloor, xpValue: 6
-            });
-        }
+    if (playerState.hp > 0) {
+        let pX = (playerPos.x - camX) * GAME_TILE; let pY = (playerPos.y - camY) * GAME_TILE;
+        ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.arc(pX+16, pY+16, 12, 0, Math.PI*2); ctx.fill();
     }
 
-    // Set transitions last to guarantee availability
-    gameMap[playerPos.y][playerPos.x] = TILE.STAIRS_UP;
-    gameMap[lastRoom.cy][lastRoom.cx] = TILE.STAIRS_DOWN;
-}
-
-// --- 16-COLOR BITMAP SPRITE GENERATION GENERATOR ---
-const gCanvas = document.getElementById('gameCanvas'); const gCtx = gCanvas.getContext('2d');
-const spriteSheet = new Image();
-
-function drawTileTemplate(ctx, col, row, cb) { ctx.save(); ctx.translate(col*32, row*32); cb(ctx); ctx.restore(); }
-function buildInternalSprites() {
-    const temp = document.createElement('canvas'); temp.width = 128; temp.height = 128; const c = temp.getContext('2d');
-    
-    // Wall: Reddish-brown structural stone brick look
-    drawTileTemplate(c, 0, 0, ctx => { ctx.fillStyle = '#800000'; ctx.fillRect(0,0,32,32); ctx.strokeStyle = '#000'; ctx.strokeRect(0,0,32,32); ctx.beginPath(); ctx.moveTo(0,16); ctx.lineTo(32,16); ctx.moveTo(16,0); ctx.lineTo(16,16); ctx.moveTo(8,16); ctx.lineTo(8,32); ctx.stroke(); });
-    // Floor: Castle of the winds sandy-yellow pathway tone
-    drawTileTemplate(c, 1, 0, ctx => { ctx.fillStyle = '#f5deb3'; ctx.fillRect(0,0,32,32); ctx.fillStyle = '#d2b48c'; ctx.fillRect(4,4,2,2); ctx.fillRect(20,16,2,2); });
-    // Stairs Up
-    drawTileTemplate(c, 2, 0, ctx => { ctx.fillStyle = '#f5deb3'; ctx.fillRect(0,0,32,32); ctx.fillStyle = '#000'; ctx.fillRect(4,4,24,24); ctx.fillStyle = '#c0c0c0'; ctx.fillRect(6,6,20,4); ctx.fillRect(10,12,12,4); });
-    // Stairs Down
-    drawTileTemplate(c, 3, 0, ctx => { ctx.fillStyle = '#f5deb3'; ctx.fillRect(0,0,32,32); ctx.fillStyle = '#000'; ctx.fillRect(4,4,24,24); ctx.fillStyle = '#808080'; ctx.fillRect(8,20,16,4); ctx.fillRect(12,12,8,4); });
-    // Chest
-    drawTileTemplate(c, 3, 1, ctx => { ctx.fillStyle = '#a0522d'; ctx.fillRect(6,8,20,18); ctx.fillStyle = '#ffd700'; ctx.fillRect(14,14,4,4); });
-    drawTileTemplate(c, 0, 2, ctx => { ctx.fillStyle = '#a0522d'; ctx.fillRect(6,12,20,14); ctx.fillStyle = '#000'; ctx.fillRect(6,6,20,6); });
-    // Hero: Classic Windows Stick Figure Knight outline
-    drawTileTemplate(c, 1, 2, ctx => { ctx.fillStyle = '#0000ff'; ctx.beginPath(); ctx.arc(16,10,5,0,Math.PI*2); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(16,15); ctx.lineTo(16,26); ctx.moveTo(16,18); ctx.lineTo(6,14); ctx.moveTo(16,18); ctx.lineTo(26,14); ctx.moveTo(16,26); ctx.lineTo(10,32); ctx.moveTo(16,26); ctx.lineTo(22,32); ctx.stroke(); });
-    // Goblin Fighter
-    drawTileTemplate(c, 2, 2, ctx => { ctx.fillStyle = '#00af00'; ctx.fillRect(10,8,12,16); ctx.fillStyle = '#ff0000'; ctx.fillRect(12,11,2,2); ctx.fillRect(18,11,2,2); });
-    // Bat
-    drawTileTemplate(c, 3, 2, ctx => { ctx.fillStyle = '#4b0082'; ctx.beginPath(); ctx.moveTo(4,10); ctx.lineTo(16,18); ctx.lineTo(28,10); ctx.lineTo(16,24); ctx.closePath(); ctx.fill(); });
-    // Trap
-    drawTileTemplate(c, 0, 3, ctx => { ctx.fillStyle = '#f5deb3'; ctx.fillRect(0,0,32,32); ctx.strokeStyle = '#ff0000'; ctx.strokeRect(8,8,16,16); });
-    // Loot bag
-    drawTileTemplate(c, 1, 3, ctx => { ctx.fillStyle = '#8b4513'; ctx.beginPath(); ctx.arc(16,20,8,0,Math.PI*2); ctx.fill(); ctx.fillStyle = '#ffd700'; ctx.fillRect(14,10,4,4); });
-
-    spriteSheet.src = temp.toDataURL();
-}
-
-function drawSprite(key, gridX, gridY) {
-    let sX = gridX - camX; let sY = gridY - camY;
-    if(sX >= 0 && sX < VIEW_WIDTH && sY >= 0 && sY < VIEW_HEIGHT) {
-        let spr = SPRITE_MAP[key];
-        gCtx.drawImage(spriteSheet, spr.col*32, spr.row*32, 32, 32, sX*32, sY*32, 32, 32);
-    }
-}
-
-function gameLoop() {
-    gCtx.fillStyle = "#000"; gCtx.fillRect(0,0,gCanvas.width,gCanvas.height);
-
-    for (let y = camY; y < camY + VIEW_HEIGHT; y++) {
-        for (let x = camX; x < camX + VIEW_WIDTH; x++) {
-            if(x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
-                let t = gameMap[y][x];
-                if (t === TILE.WALL) drawSprite('WALL', x, y);
-                else {
-                    drawSprite('FLOOR', x, y);
-                    if (t === TILE.STAIRS_UP) drawSprite('STAIRS_UP', x, y);
-                    if (t === TILE.STAIRS_DOWN) drawSprite('STAIRS_DOWN', x, y);
-                    if (t === TILE.CHEST_CLOSED) drawSprite('CHEST_CLOSED', x, y);
-                    if (t === TILE.CHEST_OPEN) drawSprite('CHEST_OPEN', x, y);
-                    if (t === TILE.TRAP) drawSprite('TRAP', x, y);
-                }
-            }
-        }
-    }
-
-    groundItems.forEach(i => drawSprite('LOOT_BAG', i.x, i.y));
-    enemies.forEach(en => drawSprite(en.type, en.x, en.y));
-    if (playerState.hp > 0) drawSprite('HERO', playerPos.x, playerPos.y);
-
-    // Floating combat text overlay
+    // Smooth float combat font styling overlays
     for (let i = floatTexts.length - 1; i >= 0; i--) {
         let ft = floatTexts[i];
-        let sX = ft.x - camX; let sY = ft.y - camY;
-        if(sX >= 0 && sX < VIEW_WIDTH && sY >= 0 && sY < VIEW_HEIGHT) {
-            gCtx.fillStyle = ft.color; gCtx.font = "bold 13px Arial";
-            gCtx.fillText(ft.text, sX*32 + 6, sY*32 - ft.offset);
-        }
-        ft.offset += 1; ft.life--; if(ft.life <= 0) floatTexts.splice(i,1);
+        let sX = (ft.x - camX) * GAME_TILE; let sY = (ft.y - camY) * GAME_TILE;
+        ctx.fillStyle = ft.color; ctx.font = "bold 12px sans-serif";
+        ctx.fillText(ft.text, sX + 4, sY - ft.offset);
+        ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
     }
 
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(drawRender);
 }
 
-spriteSheet.onload = () => {
-    gCtx.imageSmoothingEnabled = false;
-    generateMap(); updateCamera(); recalculateSecondaryStats(); updateUI();
-    requestAnimationFrame(gameLoop);
-};
-buildInternalSprites();
+initDungeon();
+requestAnimationFrame(drawRender);
 </script>
 </body>
 </html>
