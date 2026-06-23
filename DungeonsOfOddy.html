@@ -190,7 +190,7 @@
 
     <div class="win-application">
         <div class="win-titlebar">
-            <span>Dungeon Engine v2.5 - Vector Graphic Build</span>
+            <span>Dungeon Engine v2.51 - Bug-Patch Variant</span>
             <div class="win-title-buttons">
                 <button class="win-btn-small">_</button>
                 <button class="win-btn-small">X</button>
@@ -253,17 +253,26 @@ let isResting = false; let restInterval = null;
 
 function appendLog(msg, type = '') {
     const logBox = document.getElementById('log');
+    if (!logBox) return;
     let classStr = type ? ` class="${type}"` : '';
     logBox.innerHTML += `<div class="log-entry"${classStr}>${msg}</div>`;
     logBox.scrollTop = logBox.scrollHeight;
 }
 
 function updateUI() {
-    document.getElementById('ui-hp').innerText = `${playerState.hp}/${playerState.maxHp}`;
-    document.getElementById('ui-mp').innerText = `${playerState.mp}/${playerState.maxMp}`;
-    document.getElementById('ui-level').innerText = playerState.dungeonFloor;
-    document.getElementById('ui-gold').innerText = playerState.gold;
-    document.getElementById('ui-xp').innerText = `${playerState.charLevel} (${playerState.xp}/${playerState.maxXp})`;
+    let hpEl = document.getElementById('ui-hp');
+    let mpEl = document.getElementById('ui-mp');
+    let lvEl = document.getElementById('ui-level');
+    let gdEl = document.getElementById('ui-gold');
+    let xpEl = document.getElementById('ui-xp');
+    
+    if(!hpEl || !mpEl || !lvEl || !gdEl || !xpEl) return; // Prevent crashes before window load completes
+
+    hpEl.innerText = `${playerState.hp}/${playerState.maxHp}`;
+    mpEl.innerText = `${playerState.mp}/${playerState.maxMp}`;
+    lvEl.innerText = playerState.dungeonFloor;
+    gdEl.innerText = playerState.gold;
+    xpEl.innerText = `${playerState.charLevel} (${playerState.xp}/${playerState.maxXp})`;
 }
 
 function updateCamera() {
@@ -276,14 +285,13 @@ function generateProceduralDungeon() {
     gameMap = [];
     enemies = [];
     
-    // Fill completely with solid wall blueprint masking
     for (let y = 0; y < MAP_HEIGHT; y++) {
         let row = []; for (let x = 0; x < MAP_WIDTH; x++) row.push(TILE.WALL);
         gameMap.push(row);
     }
 
     let rooms = [];
-    const minSize = 4, maxSize = 7, roomCount = 7;
+    const minSize = 5, maxSize = 8, roomCount = 6;
 
     for (let i = 0; i < roomCount; i++) {
         let w = minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
@@ -291,11 +299,297 @@ function generateProceduralDungeon() {
         let x = 1 + Math.floor(Math.random() * (MAP_WIDTH - w - 2));
         let y = 1 + Math.floor(Math.random() * (MAP_HEIGHT - h - 2));
 
-        // Overlap detection collision validation
         let overlap = false;
         for (let r of rooms) {
             if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) overlap = true;
         }
 
         if (!overlap) {
-            let newRoom = { x, y, w, h, cx: Math.floor(x + w / 2), ...
+            let newRoom = { x, y, w, h, cx: Math.floor(x + w/2), cy: Math.floor(y + h/2) };
+            rooms.push(newRoom);
+
+            for (let ry = y; ry < y + h; ry++) {
+                for (let rx = x; rx < x + w; rx++) {
+                    gameMap[ry][rx] = TILE.FLOOR;
+                }
+            }
+
+            if (rooms.length > 1) {
+                let prev = rooms[rooms.length - 2];
+                // Horizontal corridor tunnels
+                for (let px = Math.min(newRoom.cx, prev.cx); px <= Math.max(newRoom.cx, prev.cx); px++) {
+                    gameMap[newRoom.cy][px] = TILE.FLOOR;
+                }
+                // Vertical corridor tunnels
+                for (let py = Math.min(newRoom.cy, prev.cy); py <= Math.max(newRoom.cy, prev.cy); py++) {
+                    gameMap[py][prev.cx] = TILE.FLOOR;
+                }
+            }
+        }
+    }
+
+    if(rooms.length === 0) {
+        // Safe fallback build loop if random values completely miss carving bounds
+        rooms.push({x: 5, y: 5, w: 6, h: 6, cx: 8, cy: 8});
+        for(let rY=5; rY<11; rY++) for(let rX=5; rX<11; rX++) gameMap[rY][rX] = TILE.FLOOR;
+    }
+
+    playerPos = { x: rooms[0].cx, y: rooms[0].cy };
+    let escapeRoom = rooms[rooms.length - 1];
+    gameMap[escapeRoom.cy][escapeRoom.cx] = TILE.STAIRS_DOWN;
+
+    for (let i = 1; i < rooms.length; i++) {
+        let r = rooms[i];
+        if (Math.random() > 0.3) {
+            enemies.push({
+                x: r.cx, y: r.cy,
+                name: Math.random() > 0.5 ? "Crystalline Golem" : "Shadow Fiend",
+                hp: 12 + playerState.dungeonFloor * 2,
+                maxHp: 12 + playerState.dungeonFloor * 2,
+                atk: 3 + playerState.dungeonFloor
+            });
+        }
+    }
+
+    updateCamera();
+    updateUI();
+}
+
+function regenerateFloor() {
+    appendLog("Forced regeneration of layout...");
+    generateProceduralDungeon();
+}
+
+// --- AMBUSH REST SYSTEM MECHANISM ---
+function handleRestTick() {
+    if (playerState.hp <= 0 || !isResting) {
+        if(restInterval) clearInterval(restInterval);
+        isResting = false;
+        return;
+    }
+
+    // 25% Ambush processing evaluation loop
+    if (Math.random() < 0.25) {
+        if(restInterval) clearInterval(restInterval);
+        isResting = false;
+
+        let offsets = [{x:-1,y:0}, {x:1,y:0}, {x:0,y:-1}, {x:0,y:1}];
+        for (let o of offsets) {
+            let tx = playerPos.x + o.x; let ty = playerPos.y + o.y;
+            if (gameMap[ty] && gameMap[ty][tx] === TILE.FLOOR) {
+                enemies.push({ x: tx, y: ty, name: "Wandering Nightstalker", hp: 10, maxHp: 10, atk: 4 });
+                break;
+            }
+        }
+        appendLog("REST INTERRUPTED! A monster caught you off-guard!", "log-important");
+        spawnText(playerPos.x, playerPos.y, "Ambushed!", "#f43f5e");
+        processTurn();
+        return;
+    }
+
+    let addedHp = Math.min(playerState.maxHp - playerState.hp, 2);
+    let addedMp = Math.min(playerState.maxMp - playerState.mp, 2);
+    playerState.hp += addedHp;
+    playerState.mp += addedMp;
+
+    if (addedHp > 0 || addedMp > 0) {
+        appendLog(`Resting... (+${addedHp} HP, +${addedMp} Mana)`);
+    }
+
+    updateUI();
+
+    if (playerState.hp >= playerState.maxHp && playerState.mp >= playerState.maxMp) {
+        if(restInterval) clearInterval(restInterval);
+        isResting = false;
+        appendLog("Fully recovered to peak health.", "log-success");
+    }
+}
+
+function processTurn() {
+    enemies.forEach(en => {
+        let distance = Math.abs(playerPos.x - en.x) + Math.abs(playerPos.y - en.y);
+        if (distance === 1) {
+            let defense = Math.floor(playerState.stats.con / 4);
+            let netDmg = Math.max(1, en.atk - defense);
+            playerState.hp -= netDmg;
+            appendLog(`${en.name} attacks you for ${netDmg} dmg!`, "log-important");
+            spawnText(playerPos.x, playerPos.y, `-${netDmg}`, '#ef4444');
+        } else if (distance < 6) {
+            let dx = Math.sign(playerPos.x - en.x);
+            let dy = Math.sign(playerPos.y - en.y);
+            if (gameMap[en.y][en.x + dx] === TILE.FLOOR) en.x += dx;
+            else if (gameMap[en.y + dy][en.x] === TILE.FLOOR) en.y += dy;
+        }
+    });
+
+    if (playerState.hp <= 0) {
+        playerState.hp = 0;
+        appendLog("You died! Press 'Regen Floor' to try again.", "log-important");
+    }
+    updateCamera();
+    updateUI();
+}
+
+function spawnText(x, y, text, color) { floatTexts.push({ x, y, text, color, life: 25, offset: 0 }); }
+function triggerAction(key) { window.dispatchEvent(new KeyboardEvent('keydown', { key: key })); }
+
+// --- CONTROLLER HANDLERS LISTENER AGENTS ---
+window.addEventListener('keydown', (e) => {
+    if (playerState.hp <= 0 || isResting) return;
+
+    let actionTaken = false;
+    let dx = 0, dy = 0;
+
+    if (e.key === 'r' || e.key === 'R') {
+        if (playerState.hp === playerState.maxHp && playerState.mp === playerState.maxMp) {
+            appendLog("Already at full resources.");
+        } else {
+            appendLog("Setting down camp to recover...");
+            isResting = true;
+            restInterval = setInterval(handleRestTick, 200);
+        }
+        return;
+    }
+    else if (e.key === 'rest' || e.key === ' ') {
+        actionTaken = true;
+        appendLog("You waitingly stand ground.");
+    }
+    else if (e.key === 'f' || e.key === 'F') {
+        if (playerState.mp >= 3) {
+            playerState.mp -= 3;
+            appendLog("Unleashed an outward Mana Blast energy shockwave!", "log-success");
+            enemies.forEach(en => {
+                if (Math.abs(en.x - playerPos.x) <= 1 && Math.abs(en.y - playerPos.y) <= 1) {
+                    en.hp -= 6;
+                    spawnText(en.x, en.y, "-6 Magic", "#38bdf8");
+                }
+            });
+            enemies = enemies.filter(en => {
+                if (en.hp <= 0) { playerState.xp += 5; appendLog(`Defeated ${en.name}!`); return false; }
+                return true;
+            });
+            actionTaken = true;
+        } else { appendLog("Insufficient Mana pools!"); }
+    }
+    else if (e.key === 'stairs' || e.key === 'Enter') {
+        if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
+            playerState.dungeonFloor++;
+            appendLog(`Descended deeper into the crypts. Welcome to Floor ${playerState.dungeonFloor}!`, "log-success");
+            generateProceduralDungeon();
+            return;
+        } else {
+            appendLog("There are no stairs beneath your current position.");
+        }
+    }
+    else {
+        if (e.key === 'ArrowUp' || e.key === 'w') dy = -1;
+        if (e.key === 'ArrowDown' || e.key === 's') dy = 1;
+        if (e.key === 'ArrowLeft' || e.key === 'a') dx = -1;
+        if (e.key === 'ArrowRight' || e.key === 'd') dx = 1;
+
+        if (dx !== 0 || dy !== 0) {
+            let tx = playerPos.x + dx; let ty = playerPos.y + dy;
+            let destTile = gameMap[ty] ? gameMap[ty][tx] : TILE.WALL;
+            let enemyTarget = enemies.find(en => en.x === tx && en.y === ty);
+
+            if (enemyTarget) {
+                let weaponDmg = 5 + Math.floor(playerState.stats.str / 3);
+                enemyTarget.hp -= weaponDmg;
+                appendLog(`You hit the ${enemyTarget.name} for ${weaponDmg} damage.`);
+                spawnText(enemyTarget.x, enemyTarget.y, `-${weaponDmg}`, '#ffffff');
+
+                if (enemyTarget.hp <= 0) {
+                    enemies = enemies.filter(en => en !== enemyTarget);
+                    playerState.xp += 5;
+                    appendLog("Target vanquished!", "log-success");
+                }
+                actionTaken = true;
+            } else if (destTile === TILE.FLOOR || destTile === TILE.STAIRS_DOWN) {
+                playerPos = { x: tx, y: ty };
+                actionTaken = true;
+            }
+        }
+    }
+
+    if (actionTaken) processTurn();
+});
+
+// --- ADVANCED PROPORTIONAL VECTOR GRAPHIC GRAPHICS ---
+const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
+
+function renderEngine() {
+    // Clear whole frame completely to prevent camera bleeding ghosting lines
+    ctx.fillStyle = "#020617"; ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    for (let y = camY; y < camY + VIEW_HEIGHT; y++) {
+        for (let x = camX; x < camX + VIEW_WIDTH; x++) {
+            let sX = (x - camX) * GAME_TILE; let sY = (y - camY) * GAME_TILE;
+
+            if (gameMap[y] && gameMap[y][x] === TILE.FLOOR) {
+                // Fixed: Now covers 32x32 size correctly to seal floor seams cleanly
+                ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 32, 32);
+                ctx.fillStyle = "#334155"; ctx.fillRect(sX + 2, sY + 2, 4, 4); 
+            } 
+            else if (gameMap[y] && gameMap[y][x] === TILE.STAIRS_DOWN) {
+                ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 32, 32);
+                
+                let gradient = ctx.createRadialGradient(sX+16, sY+16, 2, sX+16, sY+16, 12);
+                gradient.addColorStop(0, '#38bdf8'); gradient.addColorStop(1, '#0369a1');
+                ctx.fillStyle = gradient;
+                
+                ctx.fillRect(sX + 6, sY + 6, 20, 4);
+                ctx.fillRect(sX + 9, sY + 12, 14, 4);
+                ctx.fillRect(sX + 12, sY + 18, 8, 4);
+            } 
+            else {
+                ctx.fillStyle = "#0f172a"; ctx.fillRect(sX, sY, 32, 32);
+                ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 1; ctx.strokeRect(sX, sY, 32, 32);
+            }
+        }
+    }
+
+    enemies.forEach(en => {
+        let sX = (en.x - camX) * GAME_TILE; let sY = (en.y - camY) * GAME_TILE;
+        ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(sX+16, sY+22, 8, 0, Math.PI*2); ctx.fill();
+        
+        let rad = ctx.createRadialGradient(sX+16, sY+14, 2, sX+16, sY+14, 10);
+        rad.addColorStop(0, '#f43f5e'); rad.addColorStop(1, '#9f1239');
+        ctx.fillStyle = rad; ctx.beginPath(); ctx.arc(sX+16, sY+14, 9, 0, Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = "#ffe4e6"; ctx.fillRect(sX+13, sY+11, 2, 2); ctx.fillRect(sX+17, sY+11, 2, 2);
+    });
+
+    if (playerState.hp > 0) {
+        let pX = (playerPos.x - camX) * GAME_TILE; let pY = (playerPos.y - camY) * GAME_TILE;
+        ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.arc(pX+16, pY+24, 10, 0, Math.PI*2); ctx.fill();
+
+        let pGrad = ctx.createRadialGradient(pX+16, pY+14, 3, pX+16, pY+14, 12);
+        pGrad.addColorStop(0, '#38bdf8'); pGrad.addColorStop(1, '#1d4ed8');
+        ctx.fillStyle = pGrad; ctx.beginPath(); ctx.arc(pX+16, pY+14, 11, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(pX+16, pY+11, 3, 0, Math.PI*2); ctx.fill();
+    }
+
+    for (let i = floatTexts.length - 1; i >= 0; i--) {
+        let ft = floatTexts[i];
+        let sX = (ft.x - camX) * GAME_TILE; let sY = (ft.y - camY) * GAME_TILE;
+        if (sX >= 0 && sX < cvs.width && sY >= 0 && sY < cvs.height) {
+            ctx.fillStyle = ft.color; ctx.font = "bold 11px 'Segoe UI'";
+            ctx.shadowColor = "black"; ctx.shadowBlur = 4;
+            ctx.fillText(ft.text, sX + 2, sY - ft.offset);
+            ctx.shadowBlur = 0; 
+        }
+        ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
+    }
+
+    requestAnimationFrame(renderEngine);
+}
+
+// Fixed Lifecycle Hook: Initiates setup safely only after the elements load inside document memory space
+window.onload = function() {
+    generateProceduralDungeon();
+    requestAnimationFrame(renderEngine);
+};
+</script>
+</body>
+</html>
