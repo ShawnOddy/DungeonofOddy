@@ -2,814 +2,1084 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Dynamic Rarity Matrix</title>
+    <title>Dungeons of Oddy</title>
     <style>
         body {
-            background-color: #1e1e2f; color: #c8c8d0;
+            background-color: #111827;
+            color: #f3f4f6;
             font-family: 'Courier New', Courier, monospace;
-            display: flex; flex-direction: column; align-items: center;
-            padding: 20px; margin: 0; user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            user-select: none;
         }
-        h1 { color: #ffffff; margin-bottom: 10px; }
-        .container {
-            display: flex; gap: 20px; flex-wrap: wrap;
-            justify-content: center; align-items: flex-start;
+        h1 {
+            margin: 5px 0;
+            color: #fbbf24;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
-        .panel {
-            background-color: #2a2a3b; padding: 15px;
-            border-radius: 8px; border: 2px solid #3b3b4f;
+        #game-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        #canvas-panel {
             position: relative;
         }
-        .stats-panel {
-            width: 300px; background-color: #1a1a24; border-color: #10b981;
+        canvas {
+            border: 4px solid #374151;
+            background-color: #000;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+            image-rendering: pixelated;
         }
-        .stats-panel h3 {
-            margin-top: 0; color: #10b981; border-bottom: 1px solid #3b3b4f;
-            padding-bottom: 5px; font-size: 1.1em;
+        #sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold; }
-        .stat-value { color: #ffffff; }
+        .panel {
+            background-color: #1f2937;
+            border: 2px solid #4b5563;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .stat-val {
+            font-weight: bold;
+            color: #f9fafb;
+        }
+        #log {
+            height: 140px;
+            overflow-y: auto;
+            background-color: #111827;
+            border: 1px solid #374151;
+            padding: 8px;
+            font-size: 13px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+        .instructions {
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.5;
+            background-color: #111827;
+            border: 1px dashed #4b5563;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .btn {
+            background-color: #d97706;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn:hover { background-color: #b45309; }
+        .danger { color: #ef4444; font-weight: bold; }
         .bonus { color: #10b981; font-weight: bold; }
-        .danger { color: #ef4444 !important; }
-        .magic { color: #60a5fa !important; }
-        .xp-color { color: #a855f7 !important; }
-        .attr-box {
-            background-color: #1e1e2f; padding: 8px; border-radius: 4px;
-            margin-top: 10px; border: 1px solid #3b3b4f; font-size: 0.85em;
-        }
-        
-        /* Dynamic Rarity Font Classes */
-        .rarity-Common { color: #9ca3af !important; }
-        .rarity-Uncommon { color: #10b981 !important; text-shadow: 0 0 2px rgba(16,185,129,0.3); }
-        .rarity-Rare { color: #3b82f6 !important; text-shadow: 0 0 3px rgba(59,130,246,0.4); }
-        .rarity-Legendary { color: #f59e0b !important; font-weight: bold; text-shadow: 0 0 5px rgba(245,158,11,0.6); animation: pulse 1.5s infinite alternate; }
-
-        @keyframes pulse { 
-            0% { text-shadow: 0 0 2px rgba(245,158,11,0.4); } 
-            100% { text-shadow: 0 0 8px rgba(245,158,11,0.8); } 
-        }
-
-        canvas { background-color: #000; image-rendering: pixelated; display: block; }
-        #log { margin-top: 20px; color: #ffffff; font-weight: bold; min-height: 1.5em; max-width: 512px; }
-        .instructions { margin-top: 10px; font-size: 0.85em; color: #9ca3af; text-align: center; line-height: 1.4; }
-
-        .modal {
-            position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
-            background-color: rgba(26, 26, 36, 0.97); border-radius: 8px; 
-            padding: 20px; display: none; overflow-y: auto; z-index: 100;
-        }
-        #inv-modal { border: 2px solid #3b82f6; }
-        #lvl-modal { border: 2px solid #a855f7; text-align: center; }
-        #town-modal { border: 2px solid #10b981; }
-        #status-modal { border: 2px solid #06b6d4; }
-        
-        .modal h2 { margin-top: 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
-        #inv-modal h2 { color: #3b82f6; }
-        #lvl-modal h2 { color: #a855f7; }
-        #town-modal h2 { color: #10b981; text-align: center; }
-        #status-modal h2 { color: #06b6d4; text-align: center; }
-
-        .inv-row {
-            display: flex; justify-content: space-between; background: #1e1e2f;
-            padding: 10px; border-radius: 4px; border: 1px solid #3b3b4f;
-            align-items: center; margin-bottom: 8px;
-        }
-        .inv-info strong { font-size: 1.05em; }
-        .inv-info span { font-size: 0.85em; color: #9ca3af; display: block; margin-top: 4px; }
-        .inv-actions button { padding: 4px 8px; font-size: 0.85em; margin-left: 5px; cursor: pointer; border: none; border-radius: 3px; color: #fff; }
-        
-        .btn-use { background-color: #10b981; } .btn-use:hover { background-color: #059669; }
-        .btn-drop { background-color: #ef4444; } .btn-drop:hover { background-color: #dc2626; }
-        .btn-unequip { background-color: #f59e0b; } .btn-unequip:hover { background-color: #d97706; }
-        
-        .lvl-row {
-            display: flex; justify-content: space-between; align-items: center;
-            max-width: 300px; margin: 15px auto; background: #1e1e2f;
-            padding: 10px 20px; border-radius: 6px; border: 1px solid #3b3b4f;
-        }
-        .btn-plus { background-color: #a855f7; padding: 6px 14px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 4px; color: #fff; }
-
-        .town-split { display: flex; gap: 20px; margin-top: 15px; }
-        .town-col { flex: 1; background: #15151f; padding: 12px; border-radius: 6px; border: 1px solid #3b3b4f; max-height: 320px; overflow-y: auto; }
-        .town-col h3 { margin-top: 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
-
-        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .status-section { background: #15151f; border: 1px solid #3b3b4f; padding: 12px; border-radius: 6px; }
-        .status-section h3 { margin-top: 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; font-size: 1em; color: #9ca3af; }
+        .common { color: #9ca3af; }
+        .uncommon { color: #3b82f6; font-weight: bold; }
+        .rare { color: #a855f7; font-weight: bold; }
+        .legendary { color: #fbbf24; font-weight: bold; text-shadow: 0 0 4px #b45309; }
     </style>
 </head>
 <body>
 
-    <h1>Dungeon Engine</h1>
-
-    <div class="container">
-        <div class="panel stats-panel">
-            <h3>Hero Status</h3>
-            <div class="stat-row"><span>Floor:</span><span class="stat-value" id="ui-level">1</span></div>
-            <div class="stat-row"><span>Character Lvl:</span><span class="stat-value bonus" id="ui-plvl">1</span></div>
-            <div class="stat-row"><span>XP:</span><span class="stat-value xp-color" id="ui-xp">0 / 20</span></div>
-            <div class="stat-row"><span>HP:</span><span class="stat-value" id="ui-hp">20 / 20</span></div>
-            <div class="stat-row"><span>MP:</span><span class="stat-value magic" id="ui-mp">20 / 20</span></div>
-            <div class="stat-row"><span>Gold:</span><span class="stat-value" id="ui-gold">0</span></div>
-
-            <div class="attr-box">
-                <div class="stat-row"><span>STR:</span><span id="ui-str" class="stat-value"></span></div>
-                <div class="stat-row"><span>DEX:</span><span id="ui-dex" class="stat-value"></span></div>
-                <div class="stat-row"><span>CON:</span><span id="ui-con" class="stat-value"></span></div>
-                <div class="stat-row"><span>INT:</span><span id="ui-int" class="stat-value"></span></div>
-                <div class="stat-row"><span>WIS:</span><span id="ui-wis" class="stat-value"></span></div>
-            </div>
-            
-            <h3 style="margin-top: 15px;">Bag Space (<span id="ui-bag-count">0</span> / <span id="ui-bag-max">0</span>)</h3>
-            <div style="font-size: 0.85em; color: #9ca3af; text-align: center;">Press 'I' to manage items<br>Press 'P' for full character sheet</div>
+    <h1>DUNGEONS OF ODDY</h1>
+    
+    <div id="game-container">
+        <!-- Main Screen -->
+        <div id="canvas-panel">
+            <canvas id="gameCanvas" width="512" height="512"></canvas>
         </div>
 
-        <div class="panel">
-            <canvas id="gameCanvas" width="512" height="512"></canvas>
-            
-            <div id="inv-modal" class="modal">
-                <h2>Equipped Loadout</h2>
-                <div id="inv-equipped-list"></div>
-                <h2 style="margin-top: 20px;">Backpack Contents</h2>
-                <div id="inv-bag-list"></div>
-                <p style="text-align: center; margin-top: 20px;"><button style="padding:8px 16px;" onclick="toggleInventory()">Close (I)</button></p>
-            </div>
-
-            <div id="lvl-modal" class="modal">
-                <h2>🎉 LEVEL UP! 🎉</h2>
-                <p>You grew stronger! Distribute your stat points:</p>
-                <h3 style="color: #fbbf24;">Points Remaining: <span id="ui-lvl-points">0</span></h3>
-                
-                <div class="lvl-row"><span>Strength (STR)</span><button class="btn-plus" onclick="allocateStat('str')">+</button></div>
-                <div class="lvl-row"><span>Dexterity (DEX)</span><button class="btn-plus" onclick="allocateStat('dex')">+</button></div>
-                <div class="lvl-row"><span>Constitution (CON)</span><button class="btn-plus" onclick="allocateStat('con')">+</button></div>
-                <div class="lvl-row"><span>Intelligence (INT)</span><button class="btn-plus" onclick="allocateStat('int')">+</button></div>
-                <div class="lvl-row"><span>Wisdom (WIS)</span><button class="btn-plus" onclick="allocateStat('wis')">+</button></div>
-            </div>
-
-            <div id="town-modal" class="modal">
-                <h2>🏡 Welcome to Oakhaven Town 🏡</h2>
-                <p style="text-align: center;">Your wounds are fully healed! Trade artifacts and upgrade equipment below.</p>
-                
-                <div class="town-split">
-                    <div class="town-col">
-                        <h3 style="color: #60a5fa;">Blacksmith Shop Rotation</h3>
-                        <div id="town-shop-list"></div>
-                    </div>
-                    <div class="town-col">
-                        <h3 style="color: #fbbf24;">Your Backpack (Click to Sell)</h3>
-                        <div id="town-sell-list"></div>
-                    </div>
+        <!-- Sidebar Display and Controls -->
+        <div id="sidebar">
+            <div class="panel">
+                <div class="stat-line" style="font-size: 16px; border-bottom: 1px solid #4b5563; padding-bottom: 4px;">
+                    <span style="color:#fbbf24; font-weight:bold;">Hero Status</span>
+                    <span id="txt-floor" class="bonus">Floor 1</span>
                 </div>
-                <p style="text-align: center; margin-top: 25px;">
-                    <button style="background-color: #ef4444; padding: 10px 24px; border:none; border-radius:4px; color:white; cursor:pointer;" onclick="toggleTown()">Return to Dungeon</button>
-                </p>
+                <div style="margin-top: 8px;">
+                    <div class="stat-line"><span>HP:</span> <span id="txt-hp" class="danger">20/20</span></div>
+                    <div class="stat-line"><span>MP:</span> <span id="txt-mp" style="color:#3b82f6;">10/10</span></div>
+                    <div class="stat-line"><span>Level:</span> <span id="txt-level" class="stat-val">1</span></div>
+                    <div class="stat-line"><span>EXP:</span> <span id="txt-exp" class="stat-val">0/20</span></div>
+                    <div class="stat-line"><span>Gold:</span> <span id="txt-gold" style="color:#f59e0b;">0</span></div>
+                </div>
+                <div style="margin-top: 10px; border-top: 1px dashed #4b5563; padding-top: 6px;">
+                    <div class="stat-line"><span>STR:</span> <span><span id="txt-str" class="stat-val">10</span> <button class="btn-stat" onclick="upgradeStat('str')">+</button></span></div>
+                    <div class="stat-line"><span>INT:</span> <span><span id="txt-int" class="stat-val">10</span> <button class="btn-stat" onclick="upgradeStat('int')">+</button></span></div>
+                    <div class="stat-line"><span>WIS:</span> <span><span id="txt-wis" class="stat-val">10</span> <button class="btn-stat" onclick="upgradeStat('wis')">+</button></span></div>
+                    <div id="txt-points" style="font-size:11px; color:#fbbf24; text-align:right; display:none;">0 Points Available!</div>
+                </div>
             </div>
 
-            <div id="status-modal" class="modal">
-                <h2>🛡️ Hero Attributes & Mechanics 🔮</h2>
-                <div class="status-grid">
-                    <div class="status-section">
-                        <h3>Core Attributes</h3>
-                        <div class="stat-row"><span>Strength:</span><span id="st-str" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Dexterity:</span><span id="st-dex" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Constitution:</span><span id="st-con" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Intelligence:</span><span id="st-int" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Wisdom:</span><span id="st-wis" class="stat-value"></span></div>
-                    </div>
-                    <div class="status-section">
-                        <h3>Combat Capabilities</h3>
-                        <div class="stat-row"><span>Total Melee DMG:</span><span id="st-dmg" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Critical Rate:</span><span id="st-crit" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Physical DEF:</span><span id="st-def" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Arcane Blast DMG:</span><span id="st-mag" class="stat-value"></span></div>
-                        <div class="stat-row"><span>Turn Recovery %:</span><span id="st-regen" class="stat-value"></span></div>
-                    </div>
-                </div>
-                <div class="status-section" style="margin-top: 15px;">
-                    <h3>Equipment Loads</h3>
-                    <div class="stat-row"><span>Active Weapon Slot:</span><span id="st-wep"></span></div>
-                    <div class="stat-row"><span>Active Armor Slot:</span><span id="st-arm"></span></div>
-                </div>
-                <p style="text-align: center; margin-top: 25px;">
-                    <button style="background-color: #06b6d4; padding: 8px 20px; color: black; border:none; border-radius:4px; cursor:pointer; font-weight:bold;" onclick="toggleStatus()">Close Sheet (P)</button>
-                </p>
+            <div class="panel">
+                <div style="font-weight:bold; margin-bottom: 4px; color:#38bdf8;">Equipment & Buffs</div>
+                <div class="stat-line" style="font-size:12px;"><span>Weapon:</span> <span id="txt-wpn" class="common">None (+0 Dmg)</span></div>
+                <div class="stat-line" style="font-size:12px;"><span>Shield/Book:</span> <span id="txt-shd" class="common">None (+0 Def)</span></div>
+                <div class="stat-line" style="font-size:11px; color:#a855f7;"><span id="txt-active-buffs"></span></div>
             </div>
 
-            <div id="log">Welcome to the dungeon...</div>
-            <div class="instructions">
-                <strong>WASD / Arrow Keys</strong> - Move & Attack Elements<br>
-                <strong>[G]</strong> Get Ground Loot | <strong>[Enter]</strong> Walk Down/Up Stairs<br>
-                <strong>[I]</strong> Inventory Gear | <strong>[P]</strong> Detailed Hero Status Sheet<br>
-                <strong>[H]</strong> Holy Heal Spell (5 MP) | <strong>[F]</strong> Arcane Blast Spell (3 MP)
+            <div class="panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:bold;">Combat Log</span>
+                    <button class="btn" style="padding:2px 6px; font-size:11px;" onclick="travelToTown()">Town Portal</button>
+                </div>
+                <div id="log">Welcome to the depths. Tread carefully...</div>
+            </div>
+
+            <div class="instructions panel">
+                <strong>WASD/Arrows</strong>: Move / Bump Attack | <strong>[G]</strong> Pick up Item<br>
+                <strong>[X]</strong> Look/Examine Mode Toggle | <strong>[I]</strong> Open/Use Inventory Bag<br>
+                <strong>[Enter]</strong> Go down Stairs | <strong>[Esc]</strong> Cancel/Close UI Windows<br>
+                <span style="color:#60a5fa; font-weight:bold;">Spells [1-9, 0, -]:</span> 1:Missile(3M) | 2:Blast(5M) | 3:Firebolt(4M) | 4:Fireball(9M) | 5:FrostRay(5M) | 6:Blizzard(12M) | 7:Spark(3M) | 8:Lightning(10M) | 9:Shield(6M) | 0:Teleport(8M) | -:Banish(15M)
             </div>
         </div>
     </div>
 
-<script>
-// --- 1. EXPANDED DATABASE WITH WEIGHTED RARITIES ---
-const SHEET_GRID = 32; const GAME_TILE = 32; 
-const MAP_WIDTH = 30; const MAP_HEIGHT = 30;
-const VIEW_WIDTH = 16; const VIEW_HEIGHT = 16; 
+    <!-- Inventory Screen Overlay -->
+    <div id="inv-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:100;">
+        <div class="panel" style="width:340px; background:#1f2937; max-height:450px; overflow-y:auto;">
+            <div style="font-weight:bold; font-size:18px; border-bottom:1px solid #4b5563; padding-bottom:6px; margin-bottom:10px; display:flex; justify-content:between;">
+                <span>🎒 Inventory Bag</span>
+                <button onclick="toggleInventory()" style="background:none; border:none; color:#ef4444; font-weight:bold; cursor:pointer;">[X]</button>
+            </div>
+            <div id="inv-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+    </div>
 
-const TILE = { 
-    WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, DOOR_OPEN: 3, DOOR_BROKEN: 4,
-    STAIRS_UP: 5, STAIRS_DOWN: 6, CHEST_CLOSED: 7, CHEST_OPEN: 8,
-    GOBLIN: 9, BAT: 10, TRAP: 11
-};
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-let SPRITE_MAP = {
-    WALL: { col: 0, row: 0 }, FLOOR: { col: 1, row: 0 }, 
-    STAIRS_UP: { col: 2, row: 0 }, STAIRS_DOWN: { col: 3, row: 0 },
-    CHEST_CLOSED: { col: 3, row: 1 }, CHEST_OPEN: { col: 0, row: 2 }, 
-    HERO: { col: 1, row: 2 }, GOBLIN: { col: 2, row: 2 }, BAT: { col: 3, row: 2 },
-    TRAP: { col: 0, row: 3 }, LOOT_BAG: { col: 1, row: 3 }
-};
+        // Engine Constants
+        const TILE_SIZE = 32;
+        const MAP_WIDTH = 40;
+        const MAP_HEIGHT = 40;
+        const VIEW_WIDTH = 16;
+        const VIEW_HEIGHT = 16;
+        const GAME_TILE = 32; 
 
-const ITEM_DB = {
-    "Health Potion": { type: "consumable", value: 14, rarity: "Common", weight: 60, desc: "Restores 20 HP instantly.", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
-    "Mana Potion": { type: "consumable", value: 14, rarity: "Common", weight: 60, desc: "Restores 10 MP instantly.", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 10); } },
-    "Rusty Sword": { type: "weapon", value: 10, rarity: "Common", weight: 50, bonusDmg: 1, desc: "+1 Damage (Flaky and old)" },
-    "Cloth Tunic": { type: "armor", value: 10, rarity: "Common", weight: 50, bonusDef: 1, desc: "+1 Defense (Tattered fabrics)" },
+        // Tile Definitions
+        const TILE = {
+            WALL: 0, FLOOR: 1, STAIRS_DOWN: 2, CHEST_CLOSED: 3, CHEST_OPEN: 4, TRAP: 5
+        };
 
-    "Iron Dagger": { type: "weapon", value: 35, rarity: "Uncommon", weight: 30, bonusDmg: 3, desc: "+3 Damage (Balanced iron piece)" },
-    "Leather Armor": { type: "armor", value: 40, rarity: "Uncommon", weight: 30, bonusDef: 2, desc: "+2 Defense (Cured robust leather)" },
-    "Elixir of Rejuvenation": { type: "consumable", value: 50, rarity: "Uncommon", weight: 20, desc: "Fully restores your HP & MP.", use: (p) => { p.hp = p.maxHp; p.mp = p.maxMp; } },
+        // Rarity Colors Mapping
+        const RARITY_COLORS = { "Common": "#9ca3af", "Uncommon": "#3b82f6", "Rare": "#a855f7", "Legendary": "#fbbf24" };
 
-    "Steel Greatsword": { type: "weapon", value: 110, rarity: "Rare", weight: 12, bonusDmg: 6, desc: "+6 Damage (Heavy tempered alloy)" },
-    "Chainmail Suit": { type: "armor", value: 125, rarity: "Rare", weight: 12, bonusDef: 5, desc: "+5 Defense (Flexible steel links)" },
-    "Tome of Knowledge": { type: "consumable", value: 175, rarity: "Rare", weight: 8, desc: "Permanently grants +1 INT and fully fills MP.", use: (p) => { p.stats.int++; recalculateSecondaryStats(); p.mp = p.maxMp; } },
+        // Game states: "PLAYING", "EXAMINE", "DEAD"
+        let gameState = "PLAYING"; 
+        let gameMap = [];
+        let enemies = [];
+        let groundItems = [];
+        let floatingTexts = [];
+        let playerPos = { x: 0, y: 0 };
+        let examineCursor = { x: 0, y: 0 };
 
-    "Excalibur": { type: "weapon", value: 450, rarity: "Legendary", weight: 3, bonusDmg: 12, desc: "+12 Damage (A cosmic blade singing with starlight)" },
-    "Aegis Shield": { type: "armor", value: 500, rarity: "Legendary", weight: 3, bonusDef: 10, desc: "+10 Defense (Impenetrable barriers radiate outward)" }
-};
+        // Core Player Engine State Structure
+        let playerState = {
+            hp: 25, maxHp: 25, mp: 12, maxMp: 12, level: 1, exp: 0, maxExp: 20, gold: 0, statPoints: 0,
+            stats: { str: 10, int: 10, wis: 10 },
+            equipment: { weapon: null, shield: null },
+            inventory: [],
+            floorBoosts: { dmg: 0, def: 0 },
+            shieldStacks: 0,
+            dungeonFloor: 1, highestReachedFloor: 1, hasBossKey: false
+        };
 
-function rollWeightedLoot() {
-    let totalWeight = 0;
-    for (let key in ITEM_DB) { totalWeight += ITEM_DB[key].weight; }
-    
-    let roll = Math.random() * totalWeight;
-    for (let key in ITEM_DB) {
-        if (roll < ITEM_DB[key].weight) return key;
-        roll -= ITEM_DB[key].weight;
-    }
-    return "Health Potion"; 
-}
+        // --- ITEM DATABASE ---
+        const ITEM_DB = {
+            "Health Potion": { type: "consumable", value: 15, rarity: "Common", desc: "Restores 20 HP instantly.", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
+            "Mana Potion": { type: "consumable", value: 15, rarity: "Common", desc: "Restores 12 MP instantly.", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 12); } },
+            "Berserker Elixir": { type: "consumable", value: 45, rarity: "Uncommon", desc: "Gain +5 Damage until you descend to the next floor.", use: (p) => { playerState.floorBoosts.dmg += 5; } },
+            "Stoneskin Tonic": { type: "consumable", value: 40, rarity: "Uncommon", desc: "Gain +4 Defense until you descend to the next floor.", use: (p) => { playerState.floorBoosts.def += 4; } },
+            "Rusty Sword": { type: "weapon", value: 15, rarity: "Common", bonusDmg: 1, desc: "+1 Damage (Flaky and old)" },
+            "Wooden Buckler": { type: "shield", value: 15, rarity: "Common", bonusDef: 1, desc: "+1 Defense (Splintered pine)" },
+            "Dual Bandit Daggers": { type: "weapon", value: 120, rarity: "Rare", bonusDmg: 2, strikes: 2, desc: "Strikes TWICE per attack action for 2 bonus DMG each hit." },
+            "Mythril Rapier": { type: "weapon", value: 240, rarity: "Rare", bonusDmg: 3, strikes: 2, desc: "Strikes TWICE per attack action. Pierces quickly." },
+            "Vampiric Scythe": { type: "weapon", value: 380, rarity: "Legendary", bonusDmg: 7, lifesteal: 0.25, desc: "Heals you for 25% of clean physical damage dealt." },
+            "Apprentice Chronicle": { type: "shield", value: 80, rarity: "Uncommon", bonusDef: 1, spellPowerMod: 1.25, spellCostMod: 1.2, desc: "Spells deal 25% more damage but cost 20% more mana." },
+            "Forbidden Black Grimoire": { type: "shield", value: 400, rarity: "Legendary", bonusDef: 0, spellPowerMod: 2.0, spellCostMod: 1.5, desc: "Spells deal DOUBLE damage but cost 50% more mana." }
+        };
 
-function getRarityStyledName(itemName) {
-    let item = ITEM_DB[itemName];
-    if (!item) return itemName;
-    return `<span class="rarity-${item.rarity}">${itemName}</span>`;
-}
+        // --- WEIGHTED MONSTER SYSTEM MATRIX ---
+        const MONSTER_TEMPLATES = [
+            { name: "Sewer Bat", baseWeight: 80, decay: 4, minFloor: 1, hp: 6, atk: 2, def: 0, xp: 5, color: "#a1a1aa", weaknesses: {}, resistances: {}, examineText: "A squeaking flier. Weak and simple." },
+            { name: "Goblin Marauder", baseWeight: 35, growth: 3, minFloor: 2, hp: 14, atk: 4, def: 1, xp: 12, color: "#22c55e", weaknesses: { "Fire": 1.5 }, resistances: {}, examineText: "Agile green thief. Hates fire beams." },
+            { name: "Animated Skeleton", baseWeight: 20, growth: 4, minFloor: 3, hp: 18, atk: 5, def: 2, xp: 18, color: "#e2e8f0", weaknesses: { "Fire": 2.0 }, resistances: { "Ice": 0.25 }, examineText: "Brittle bones. Highly vulnerable to flame but fully immune to freezing cold spells." },
+            { name: "Armored Iron-Clad", baseWeight: 10, growth: 3, minFloor: 4, hp: 25, atk: 4, def: 5, xp: 22, color: "#94a3b8", weaknesses: { "Lightning": 1.5 }, resistances: {}, examineText: "Walking scrap steel suit. High defense block—multi-hit low damage weapons can't scratch it!" },
+            { name: "Golden Scarab", baseWeight: 2, growth: 0.2, minFloor: 2, hp: 8, atk: 1, def: 0, xp: 60, color: "#fbbf24", isTreasureScarab: true, weaknesses: {}, resistances: {}, examineText: "Shimmering beetle. Skittish, but exploding it rewards tons of loose currency items!" },
+            { name: "Ancient Red Dragon", baseWeight: 0.5, growth: 1.5, minFloor: 1, hp: 120, atk: 22, def: 6, xp: 250, color: "#ef4444", weaknesses: { "Ice": 2.0 }, resistances: { "Fire": 0.0 }, examineText: "The pinnacle of dungeon terror. Immune to Fire, weak to Ice shards. Approach at your own peril!" }
+        ];
 
-// --- 2. STATE VARIABLES ---
-let gameState = "PLAYING"; 
+        // --- FIXED SPELLBOOK DICTIONARY ---
+        const SPELL_BOOK = {
+            '1': { name: "Magic Missile", cost: 3, element: "Neutral", desc: "Pure arcane darts that hit instantly. Cannot miss. (1x INT)" },
+            '2': { name: "Arcane Blast",  cost: 5, element: "Neutral", desc: "A burst of raw energy hitting all adjacent tiles around the caster. (1.2x INT)" },
+            '3': { name: "Firebolt",      cost: 4, element: "Fire",    desc: "Hurls a small, targeted bolt of fire at closest enemy. (1.2x INT)" },
+            '4': { name: "Fireball",      cost: 9, element: "Fire",    desc: "Medium fire explosion hitting target enemy and adjacent monsters. (1.5x INT)" },
+            '5': { name: "Frost Ray",     cost: 5, element: "Ice",     desc: "Fires a line of frost damage in a straight path towards target. (1x INT)" },
+            '6': { name: "Blizzard",      cost: 12,element: "Ice",     desc: "Summons a biting ice storm targeting all enemies currently in the room. (1.4x INT)" },
+            '7': { name: "Spark",         cost: 3, element: "Lightning", desc: "Zaps an enemy. Has a 10% chance to Paralyze (skips next turn). (0.8x INT)" },
+            '8': { name: "Lightning Bolt",cost: 10,element: "Lightning", desc: "Heavy lightning strike directed at a single target location. (2.5x INT)" },
+            '9': { name: "Shield",        cost: 6, element: "Neutral", desc: "Creates a defensive barrier absorbing the next 3 incoming attacks completely." },
+            '0': { name: "Teleport",      cost: 8, element: "Cosmic",  desc: "Emergency warp. Relocates player randomly onto any open floor tile safely." },
+            '-': { name: "Banish",        cost: 15,element: "Cosmic",  desc: "Erases target non-boss enemy from reality entirely, but yields 0 EXP." }
+        };
 
-let playerState = {
-    stats: { str: 12, dex: 10, con: 14, int: 16, wis: 15 },
-    hp: 0, maxHp: 0, mp: 0, maxMp: 0,
-    gold: 60, dungeonFloor: 1, charLevel: 1,
-    xp: 0, maxXp: 20, unspentPoints: 0,
-    inventory: ["Health Potion", "Iron Dagger"], 
-    equipment: { weapon: null, armor: null }
-};
+        // --- PROCEDURAL ENGINE DUNGEON MAP CREATION ---
+        function generateMap() {
+            gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
+            enemies = [];
+            groundItems = [];
+            playerState.hasBossKey = false;
 
-function recalculateSecondaryStats() {
-    playerState.maxHp = playerState.stats.con * 2;
-    playerState.maxMp = playerState.stats.int * 2;
-    playerState.maxXp = playerState.charLevel * 20;
-}
-recalculateSecondaryStats();
-playerState.hp = playerState.maxHp;
-playerState.mp = playerState.maxMp;
+            let rooms = [];
+            const minSize = 5, maxSize = 10, roomCount = 8;
 
-let gameMap = []; let enemies = []; let groundItems = []; let floatTexts = [];   
-let playerPos = { x: 2, y: 2 }; 
-let camX = 0; let camY = 0;
+            for (let i = 0; i < roomCount; i++) {
+                let w = Math.floor(Math.random() * (maxSize - minSize)) + minSize;
+                let h = Math.floor(Math.random() * (maxSize - minSize)) + minSize;
+                let x = Math.floor(Math.random() * (MAP_WIDTH - w - 2)) + 1;
+                let y = Math.floor(Math.random() * (MAP_HEIGHT - h - 2)) + 1;
 
-function updateCamera() {
-    camX = playerPos.x - Math.floor(VIEW_WIDTH / 2);
-    camY = playerPos.y - Math.floor(VIEW_HEIGHT / 2);
-    camX = Math.max(0, Math.min(camX, MAP_WIDTH - VIEW_WIDTH));
-    camY = Math.max(0, Math.min(camY, MAP_HEIGHT - VIEW_HEIGHT));
-}
-
-// --- 3. CANVAS GENERATION ---
-const gCanvas = document.getElementById('gameCanvas'); const gCtx = gCanvas.getContext('2d');
-const spriteSheet = new Image();
-
-function drawTile(ctx, col, row, drawFunction) { ctx.save(); ctx.translate(col * 32, row * 32); drawFunction(ctx); ctx.restore(); }
-function generateInternalSpriteSheet() {
-    const tempCanvas = document.createElement('canvas'); tempCanvas.width = 128; tempCanvas.height = 128; const ctx = tempCanvas.getContext('2d');
-    drawTile(ctx, 0, 0, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#1f2937'; c.fillRect(0, 14, 32, 2); c.fillRect(14, 0, 2, 14); c.fillRect(24, 16, 2, 16); });
-    drawTile(ctx, 1, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#27272a'; c.fillRect(4, 4, 8, 8); c.fillRect(20, 18, 6, 6); });
-    drawTile(ctx, 2, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#9ca3af'; c.fillRect(4, 16, 12, 16); c.fillRect(16, 4, 12, 28); });
-    drawTile(ctx, 3, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 24); c.fillStyle = '#4b5563'; c.fillRect(4, 4, 12, 8); c.fillRect(8, 12, 12, 8); });
-    drawTile(ctx, 3, 1, c => { c.fillStyle = '#b45309'; c.fillRect(4, 12, 24, 16); c.fillStyle = '#d97706'; c.fillRect(4, 12, 24, 4); c.fillStyle = '#fbbf24'; c.fillRect(14, 14, 4, 6); });
-    drawTile(ctx, 0, 2, c => { c.fillStyle = '#b45309'; c.fillRect(4, 16, 24, 12); c.fillStyle = '#d97706'; c.fillRect(4, 4, 24, 4); c.fillStyle = '#fbbf24'; c.fillRect(8, 12, 16, 4); c.fillStyle = '#60a5fa'; c.fillRect(12, 10, 4, 4); });
-    drawTile(ctx, 1, 2, c => { c.fillStyle = '#2563eb'; c.fillRect(8, 8, 16, 20); c.fillStyle = '#fca5a5'; c.fillRect(10, 10, 12, 8); c.fillStyle = '#94a3b8'; c.fillRect(24, 12, 4, 12); });
-    drawTile(ctx, 2, 2, c => { c.fillStyle = '#16a34a'; c.fillRect(8, 12, 16, 16); c.fillStyle = '#ef4444'; c.fillRect(10, 14, 4, 4); c.fillRect(18, 14, 4, 4); c.fillStyle = '#78350f'; c.fillRect(4, 10, 4, 16); });
-    drawTile(ctx, 3, 2, c => { c.fillStyle = '#581c87'; c.fillRect(12, 12, 8, 8); c.fillStyle = '#000000'; c.beginPath(); c.moveTo(12,14); c.lineTo(2,8); c.lineTo(6,18); c.fill(); c.beginPath(); c.moveTo(20,14); c.lineTo(30,8); c.lineTo(26,18); c.fill(); c.fillStyle = '#ef4444'; c.fillRect(14, 14, 2, 2); c.fillRect(18, 14, 2, 2); });
-    drawTile(ctx, 0, 3, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#111827'; c.fillRect(8, 8, 16, 16); c.fillStyle = '#9ca3af'; c.beginPath(); c.moveTo(16,4); c.lineTo(12,12); c.lineTo(20,12); c.fill(); c.beginPath(); c.moveTo(16,28); c.lineTo(12,20); c.lineTo(20,20); c.fill(); });
-    drawTile(ctx, 1, 3, c => { c.fillStyle = '#d97706'; c.beginPath(); c.arc(16, 20, 8, 0, Math.PI * 2); c.fill(); c.fillStyle = '#f59e0b'; c.fillRect(14, 8, 4, 6); });
-    spriteSheet.src = tempCanvas.toDataURL("image/png");
-}
-
-spriteSheet.onload = () => {
-    gCtx.imageSmoothingEnabled = false; generateMap(); updateCamera(); updateUI(); requestAnimationFrame(gameLoop);
-};
-generateInternalSpriteSheet();
-
-// --- 4. ENGINE CORE LOOPS ---
-function getEquipBonus(statType) {
-    let wep = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
-    let arm = playerState.equipment.armor ? ITEM_DB[playerState.equipment.armor] : null;
-    if (statType === 'dmg') return wep ? wep.bonusDmg : 0;
-    if (statType === 'def') return arm ? arm.bonusDef : 0;
-    return 0;
-}
-
-function updateUI() {
-    document.getElementById('ui-level').innerText = playerState.dungeonFloor;
-    document.getElementById('ui-plvl').innerText = playerState.charLevel;
-    document.getElementById('ui-xp').innerText = `${playerState.xp} / ${playerState.maxXp}`;
-    
-    let hpElement = document.getElementById('ui-hp');
-    hpElement.innerText = `${playerState.hp} / ${playerState.maxHp}`;
-    if (playerState.hp <= playerState.maxHp * 0.25) hpElement.classList.add('danger');
-    else hpElement.classList.remove('danger');
-    
-    document.getElementById('ui-mp').innerText = `${playerState.mp} / ${playerState.maxMp}`;
-    document.getElementById('ui-gold').innerText = playerState.gold;
-
-    document.getElementById('ui-str').innerHTML = `${playerState.stats.str}`;
-    document.getElementById('ui-dex').innerHTML = `${playerState.stats.dex}`;
-    document.getElementById('ui-con').innerHTML = `${playerState.stats.con}`;
-    document.getElementById('ui-int').innerHTML = `${playerState.stats.int}`;
-    document.getElementById('ui-wis').innerHTML = `${playerState.stats.wis}`;
-
-    document.getElementById('ui-bag-count').innerText = playerState.inventory.length;
-    document.getElementById('ui-bag-max').innerText = playerState.stats.str;
-    
-    let standItem = groundItems.find(i => i.x === playerPos.x && i.y === playerPos.y);
-    if (standItem && gameState === "PLAYING") {
-        document.getElementById('log').innerHTML = standItem.isGold 
-            ? `💰 You see ${standItem.amount} Gold on the floor. [G] to pickup.`
-            : `🎒 You see a ${getRarityStyledName(standItem.name)} lying here. [G] to pickup.`;
-    }
-}
-
-function hasLineOfSight(x1, y1, x2, y2) {
-    let dx = Math.abs(x2 - x1); let dy = Math.abs(y2 - y1);
-    let sx = (x1 < x2) ? 1 : -1; let sy = (y1 < y2) ? 1 : -1;
-    let err = dx - dy;
-    while (true) {
-        if (x1 === x2 && y1 === y2) return true;
-        if (gameMap[y1] && gameMap[y1][x1] === TILE.WALL) return false;
-        let e2 = 2 * err;
-        if (e2 > -dy) { err -= dy; x1 += sx; }
-        if (e2 < dx) { err += dx; y1 += sy; }
-    }
-}
-
-function toggleInventory() {
-    const modal = document.getElementById('inv-modal');
-    if (gameState === "PLAYING") {
-        gameState = "INVENTORY"; renderInventoryList(); modal.style.display = 'block';
-    } else if (gameState === "INVENTORY") {
-        gameState = "PLAYING"; modal.style.display = 'none'; updateUI();
-    }
-}
-
-function toggleStatus() {
-    const modal = document.getElementById('status-modal');
-    if (gameState === "PLAYING") {
-        gameState = "STATUS"; renderStatusScreen(); modal.style.display = 'block';
-    } else if (gameState === "STATUS") {
-        gameState = "PLAYING"; modal.style.display = 'none'; updateUI();
-    }
-}
-
-function renderStatusScreen() {
-    let p = playerState;
-    let wepBonus = getEquipBonus('dmg'); let armBonus = getEquipBonus('def');
-    let baseDmg = 1 + Math.floor(p.stats.str / 4); let baseDef = Math.floor(p.stats.con / 5);
-
-    document.getElementById('st-str').innerText = p.stats.str;
-    document.getElementById('st-dex').innerText = p.stats.dex;
-    document.getElementById('st-con').innerText = p.stats.con;
-    document.getElementById('st-int').innerText = p.stats.int;
-    document.getElementById('st-wis').innerText = p.stats.wis;
-
-    document.getElementById('st-dmg').innerText = `${baseDmg + wepBonus} (${baseDmg} Base + ${wepBonus} Weapon)`;
-    document.getElementById('st-crit').innerText = `${p.stats.dex}% Chance`;
-    document.getElementById('st-def').innerText = `${baseDef + armBonus} (${baseDef} Base + ${armBonus} Armor)`;
-    document.getElementById('st-mag').innerText = `${2 + Math.floor(p.stats.int / 3)} Magic Power`;
-    document.getElementById('st-regen').innerText = `${Math.floor(p.stats.wis * 1.5)}% Chance / Action`;
-
-    let wepNode = document.getElementById('st-wep');
-    if (p.equipment.weapon) {
-        wepNode.className = `rarity-${ITEM_DB[p.equipment.weapon].rarity}`;
-        wepNode.innerText = `${p.equipment.weapon} (+${wepBonus} Dmg)`;
-    } else { wepNode.className = ''; wepNode.innerText = "Unarmed (0)"; }
-
-    let armNode = document.getElementById('st-arm');
-    if (p.equipment.armor) {
-        armNode.className = `rarity-${ITEM_DB[p.equipment.armor].rarity}`;
-        armNode.innerText = `${p.equipment.armor} (+${armBonus} Def)`;
-    } else { armNode.className = ''; armNode.innerText = "No Armor (0)"; }
-}
-
-function toggleTown() {
-    const modal = document.getElementById('town-modal');
-    if (gameState === "PLAYING") {
-        gameState = "TOWN"; playerState.hp = playerState.maxHp; playerState.mp = playerState.maxMp;
-        renderTownInterface(); modal.style.display = 'block';
-        document.getElementById('log').innerText = "🏡 Resting in town. Stock up your bag with supplies.";
-    } else if (gameState === "TOWN") {
-        gameState = "PLAYING"; modal.style.display = 'none';
-    }
-    updateUI();
-}
-
-function renderTownInterface() {
-    const shopList = document.getElementById('town-shop-list');
-    const sellList = document.getElementById('town-sell-list');
-    shopList.innerHTML = ''; sellList.innerHTML = '';
-
-    ["Health Potion", "Mana Potion", "Iron Dagger", "Leather Armor"].forEach(name => {
-        let item = ITEM_DB[name];
-        shopList.innerHTML += `
-            <div class="inv-row">
-                <div class="inv-info"><strong class="rarity-${item.rarity}">${name} [${item.rarity}]</strong><span>${item.desc}</span></div>
-                <div class="inv-actions"><button class="btn-use" onclick="townBuy('${name}')">${item.value}g</button></div>
-            </div>`;
-    });
-
-    if (playerState.inventory.length === 0) {
-        sellList.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Your backpack is empty.</div>';
-    } else {
-        playerState.inventory.forEach((name, idx) => {
-            let item = ITEM_DB[name]; let sellPrice = Math.floor(item.value / 2);
-            sellList.innerHTML += `
-                <div class="inv-row">
-                    <div class="inv-info"><strong class="rarity-${item.rarity}">${name}</strong><span>Gain: ${sellPrice} Gold</span></div>
-                    <div class="inv-actions"><button class="btn-drop" onclick="townSell(${idx})">+${sellPrice}g</button></div>
-                </div>`;
-        });
-    }
-}
-
-function townBuy(itemName) {
-    let item = ITEM_DB[itemName];
-    if (playerState.gold < item.value) { alert("Not enough gold!"); return; }
-    if (playerState.inventory.length >= playerState.stats.str) { alert("Your bag is completely full!"); return; }
-    playerState.gold -= item.value; playerState.inventory.push(itemName);
-    renderTownInterface(); updateUI();
-}
-
-function townSell(idx) {
-    let itemName = playerState.inventory[idx]; let sellPrice = Math.floor(ITEM_DB[itemName].value / 2);
-    playerState.gold += sellPrice; playerState.inventory.splice(idx, 1);
-    renderTownInterface(); updateUI();
-}
-
-function checkLevelUp() {
-    if (playerState.xp >= playerState.maxXp) {
-        playerState.xp -= playerState.maxXp; playerState.charLevel++; playerState.unspentPoints += 3;
-        recalculateSecondaryStats(); playerState.hp = playerState.maxHp; playerState.mp = playerState.maxMp;
-        gameState = "LEVEL_UP";
-        document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
-        document.getElementById('lvl-modal').style.display = 'block';
-        spawnText(playerPos.x, playerPos.y, "LEVEL UP!", '#a855f7');
-    }
-}
-
-function allocateStat(statKey) {
-    if (playerState.unspentPoints > 0) {
-        playerState.stats[statKey]++; playerState.unspentPoints--;
-        document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
-        recalculateSecondaryStats(); updateUI();
-        if (playerState.unspentPoints <= 0) {
-            document.getElementById('lvl-modal').style.display = 'none'; gameState = "PLAYING";
-            document.getElementById('log').innerText = "💪 Your muscles harden with new potential!";
-        }
-    }
-}
-
-function renderInventoryList() {
-    const eqList = document.getElementById('inv-equipped-list'); const bgList = document.getElementById('inv-bag-list');
-    eqList.innerHTML = ''; bgList.innerHTML = '';
-
-    ['weapon', 'armor'].forEach(slot => {
-        let itemName = playerState.equipment[slot];
-        if (itemName) {
-            let item = ITEM_DB[itemName];
-            eqList.innerHTML += `
-                <div class="inv-row">
-                    <div class="inv-info"><strong class="rarity-${item.rarity}">[${slot.toUpperCase()}] ${itemName} (${item.rarity})</strong><span>${item.desc}</span></div>
-                    <div class="inv-actions"><button class="btn-unequip" onclick="unequipItem('${slot}')">Unequip</button></div>
-                </div>`;
-        } else { eqList.innerHTML += `<div class="inv-row"><div class="inv-info" style="color:#6b7280;">[${slot.toUpperCase()}] Empty Slot</div></div>`; }
-    });
-
-    if (playerState.inventory.length === 0) {
-        bgList.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Bag is empty.</div>';
-    } else {
-        playerState.inventory.forEach((itemName, idx) => {
-            let item = ITEM_DB[itemName];
-            let actionBtn = item.type === "consumable" 
-                ? `<button class="btn-use" onclick="useItem(${idx})">Consume</button>` 
-                : `<button class="btn-use" onclick="equipItem(${idx})">Equip</button>`;
-            bgList.innerHTML += `
-                <div class="inv-row">
-                    <div class="inv-info"><strong class="rarity-${item.rarity}">${itemName} [${item.rarity}]</strong><span>${item.desc}</span></div>
-                    <div class="inv-actions">${actionBtn}<button class="btn-drop" onclick="dropItem(${idx})">Drop</button></div>
-                </div>`;
-        });
-    }
-}
-
-function useItem(idx) {
-    let name = playerState.inventory[idx]; ITEM_DB[name].use(playerState); playerState.inventory.splice(idx, 1);
-    document.getElementById('log').innerHTML = `🎒 Consumed ${getRarityStyledName(name)}.`; finishMenuAction();
-}
-function equipItem(idx) {
-    let name = playerState.inventory[idx]; let type = ITEM_DB[name].type; let old = playerState.equipment[type];
-    playerState.equipment[type] = name; playerState.inventory.splice(idx, 1); if (old) playerState.inventory.push(old);
-    document.getElementById('log').innerHTML = `🎒 Equipped ${getRarityStyledName(name)}.`; finishMenuAction();
-}
-function unequipItem(slot) {
-    if (playerState.inventory.length >= playerState.stats.str) { alert("Bag is full!"); return; }
-    let name = playerState.equipment[slot]; playerState.inventory.push(name); playerState.equipment[slot] = null;
-    document.getElementById('log').innerHTML = `🎒 Retracted ${getRarityStyledName(name)} back into storage.`; finishMenuAction();
-}
-function dropItem(idx) {
-    let name = playerState.inventory[idx]; playerState.inventory.splice(idx, 1);
-    groundItems.push({ x: playerPos.x, y: playerPos.y, name: name, amount: 1, isGold: false });
-    document.getElementById('log').innerHTML = `🎒 Dropped ${getRarityStyledName(name)} onto the cold stone ground.`; finishMenuAction();
-}
-function finishMenuAction() { toggleInventory(); processTurn(); }
-
-function spawnText(x, y, text, color) { floatTexts.push({ x: x, y: y, text: text, color: color, life: 40, offset: 0 }); }
-function isWalkable(x, y) {
-    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return false;
-    let t = gameMap[y][x]; if (t === TILE.WALL || t === TILE.CHEST_CLOSED) return false;
-    if (playerPos.x === x && playerPos.y === y || enemies.some(e => e.x === x && e.y === y)) return false;
-    return true;
-}
-
-// --- 5. COMBAT AND TURN RESOLUTION ---
-function processTurn() {
-    enemies = enemies.filter(en => {
-        if (en.hp <= 0) { 
-            playerState.xp += en.xpValue; spawnText(en.x, en.y, `+${en.xpValue} XP`, '#a855f7');
-            
-            let roll = Math.random();
-            if (roll < 0.35) {
-                groundItems.push({ x: en.x, y: en.y, name: "Gold", amount: Math.floor(Math.random() * 12) + 4, isGold: true });
-                document.getElementById('log').innerHTML = `💀 Slayed ${en.name}! Scattered coins spill out.`;
-            } else if (roll < 0.65) {
-                let rolledItem = rollWeightedLoot();
-                groundItems.push({ x: en.x, y: en.y, name: rolledItem, amount: 1, isGold: false });
-                document.getElementById('log').innerHTML = `💀 Slayed ${en.name}! They dropped: ${getRarityStyledName(rolledItem)}.`;
-            } else {
-                document.getElementById('log').innerText = `💀 Slayed ${en.name}!`;
-            }
-            return false; 
-        }
-        return true;
-    });
-
-    checkLevelUp();
-    if (gameState !== "PLAYING") return;
-
-    let playerDef = Math.floor(playerState.stats.con / 5) + getEquipBonus('def');
-
-    enemies.forEach(en => {
-        let dx = playerPos.x - en.x; let dy = playerPos.y - en.y; let dist = Math.abs(dx) + Math.abs(dy);
-        if (dist === 1) { 
-            let dmg = Math.max(0, en.atk - playerDef); playerState.hp -= dmg; spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
-        } else if (dist < 7) { 
-            if (hasLineOfSight(en.x, en.y, playerPos.x, playerPos.y)) {
-                let nx = en.x + Math.sign(dx); let ny = en.y + Math.sign(dy);
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    if (isWalkable(nx, en.y)) en.x = nx; else if (isWalkable(en.x, ny)) en.y = ny;
-                } else {
-                    if (isWalkable(en.x, ny)) en.y = ny; else if (isWalkable(nx, en.y)) en.x = nx;
+                let overlap = false;
+                for (let r of rooms) {
+                    if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) overlap = true;
                 }
-            }
-        }
-    });
-
-    if (playerState.hp <= 0) { playerState.hp = 0; document.getElementById('log').innerText = `💀 GAME OVER. RESET TO TRY AGAIN.`; }
-    if (playerState.hp > 0 && Math.random() < (playerState.stats.wis * 0.015)) {
-        if (playerState.hp < playerState.maxHp) playerState.hp++;
-        if (playerState.mp < playerState.maxMp) playerState.mp++;
-    }
-    updateCamera(); updateUI();
-}
-
-// --- 6. KEYBOARD EVENT INTERCEPTORS ---
-window.addEventListener('keydown', (e) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F', 'i', 'I', 'g', 'G', 'p', 'P'].includes(e.key)) e.preventDefault();
-    if (playerState.hp <= 0 || gameState === "LEVEL_UP" || gameState === "TOWN") return; 
-
-    if (e.key === 'p' || e.key === 'P') { toggleStatus(); return; }
-    if (e.key === 'i' || e.key === 'I') { if (gameState !== "STATUS") toggleInventory(); return; }
-    if (gameState === "INVENTORY" || gameState === "STATUS") return;
-
-    let tookAction = false;
-
-    if (e.key === 'g' || e.key === 'G') {
-        let idx = groundItems.findIndex(i => i.x === playerPos.x && i.y === playerPos.y);
-        if (idx !== -1) {
-            let item = groundItems[idx];
-            if (item.isGold) {
-                playerState.gold += item.amount; document.getElementById('log').innerText = `💰 Cleaned up ${item.amount} gold coins.`;
-                groundItems.splice(idx, 1); tookAction = true;
-            } else {
-                if (playerState.inventory.length >= playerState.stats.str) {
-                    document.getElementById('log').innerText = `🎒 Overburdened! Upgrade STR to hold more loot items.`;
-                } else {
-                    playerState.inventory.push(item.name); 
-                    document.getElementById('log').innerHTML = `🎒 Bagged a piece of ${getRarityStyledName(item.name)}.`;
-                    groundItems.splice(idx, 1); tookAction = true;
-                }
-            }
-        } else { document.getElementById('log').innerText = "There are no target pick-ups here."; }
-    }
-    else if (e.key === 'h' || e.key === 'H') {
-        if (playerState.mp >= 5) {
-            let heal = Math.floor(playerState.stats.wis / 1.5) + 2; playerState.mp -= 5;
-            playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
-            spawnText(playerPos.x, playerPos.y, `+${heal}`, '#10b981'); tookAction = true;
-        }
-    }
-    else if (e.key === 'f' || e.key === 'F') {
-        if (playerState.mp >= 3) {
-            playerState.mp -= 3; let mdmg = 2 + Math.floor(playerState.stats.int / 3);
-            enemies.forEach(en => {
-                if (Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y) === 1) { en.hp -= mdmg; spawnText(en.x, en.y, `-${mdmg}`, '#60a5fa'); }
-            });
-            tookAction = true;
-        }
-    }
-    else if (e.key === 'Enter') {
-        let currentTile = gameMap[playerPos.y][playerPos.x];
-        if (currentTile === TILE.STAIRS_DOWN) {
-            playerState.dungeonFloor++; generateMap(); updateCamera();
-            document.getElementById('log').innerText = `Venturing downwards into Floor ${playerState.dungeonFloor}...`;
-            tookAction = true;
-        } else if (currentTile === TILE.STAIRS_UP) { toggleTown(); }
-    }
-    else {
-        let targetX = playerPos.x, targetY = playerPos.y;
-        if (e.key === 'ArrowUp' || e.key === 'w') { targetY--; tookAction = true; }
-        if (e.key === 'ArrowDown' || e.key === 's') { targetY++; tookAction = true; }
-        if (e.key === 'ArrowLeft' || e.key === 'a') { targetX--; tookAction = true; }
-        if (e.key === 'ArrowRight' || e.key === 'd') { targetX++; tookAction = true; }
-
-        if (tookAction) {
-            let targetTile = gameMap[targetY] ? gameMap[targetY][targetX] : null;
-            let targetEnemy = enemies.find(en => en.x === targetX && en.y === targetY);
-            
-            if (targetEnemy) {
-                let dmg = 1 + Math.floor(playerState.stats.str / 4) + getEquipBonus('dmg');
-                let isCrit = (Math.random() * 100) < playerState.stats.dex;
-                if (isCrit) dmg *= 2;
-                targetEnemy.hp -= dmg;
-                spawnText(targetEnemy.x, targetEnemy.y, `-${dmg}`, isCrit ? '#fbbf24' : '#ffffff');
-                document.getElementById('log').innerText = `⚔️ Hit ${targetEnemy.name} for ${dmg}${isCrit ? ' (CRIT!)':' '}.`;
-            } else if (targetTile !== null && targetTile !== TILE.WALL) {
-                if (targetTile === TILE.CHEST_CLOSED) {
-                    if (playerState.inventory.length >= playerState.stats.str) {
-                        document.getElementById('log').innerText = `🎒 Clear bag space to lockpick chests!`; tookAction = false; 
-                    } else {
-                        gameMap[targetY][targetX] = TILE.CHEST_OPEN;
-                        let found = rollWeightedLoot(); 
-                        playerState.inventory.push(found); 
-                        document.getElementById('log').innerHTML = `🏆 Cracked chest open! Found: ${getRarityStyledName(found)}`;
+                if (!overlap) {
+                    rooms.push({ x, y, w, h, cx: Math.floor(x + w/2), cy: Math.floor(y + h/2) });
+                    for (let ry = y; ry < y + h; ry++) {
+                        for (let rx = x; rx < x + w; rx++) gameMap[ry][rx] = TILE.FLOOR;
                     }
-                } else if (targetTile === TILE.TRAP) {
-                    playerState.hp -= 4; gameMap[targetY][targetX] = TILE.FLOOR; playerPos.x = targetX; playerPos.y = targetY;
-                    spawnText(playerPos.x, playerPos.y, `-4`, '#ef4444');
-                } else { playerPos.x = targetX; playerPos.y = targetY; }
-            } else { tookAction = false; }
+                }
+            }
+
+            // Connect Rooms with Corridors
+            for (let i = 0; i < rooms.length - 1; i++) {
+                let r1 = rooms[i], r2 = rooms[i+1];
+                let tx = r1.cx;
+                while (tx !== r2.cx) { gameMap[r1.cy][tx] = TILE.FLOOR; tx += Math.sign(r2.cx - tx); }
+                let ty = r1.cy;
+                while (ty !== r2.cy) { gameMap[ty][r2.cx] = TILE.FLOOR; ty += Math.sign(r2.cy - ty); }
+            }
+
+            // Put Player in Room 1
+            playerPos.x = rooms[0].cx;
+            playerPos.y = rooms[0].cy;
+
+            // Put Exit Stairs in Last Room
+            let lastRoom = rooms[rooms.length - 1];
+            gameMap[lastRoom.cy][lastRoom.cx] = TILE.STAIRS_DOWN;
+
+            // Populate Decorative Items, Chests, and Traps
+            rooms.forEach((r, idx) => {
+                if (idx === 0) return; // Skip player room
+                
+                // Add Chests
+                if (Math.random() < 0.40) {
+                    let cx = r.x + Math.floor(Math.random() * (r.w - 1));
+                    let cy = r.y + Math.floor(Math.random() * (r.h - 1));
+                    if (gameMap[cy][cx] === TILE.FLOOR) gameMap[cy][cx] = TILE.CHEST_CLOSED;
+                }
+                // Add Spikes/Traps
+                if (Math.random() < 0.25) {
+                    let tx = r.x + Math.floor(Math.random() * (r.w - 1));
+                    let ty = r.y + Math.floor(Math.random() * (r.h - 1));
+                    if (gameMap[ty][tx] === TILE.FLOOR) gameMap[ty][tx] = TILE.TRAP;
+                }
+            });
+
+            // --- PROBABILISTIC DYNAMIC SPAWNER ---
+            let isBossFloor = (playerState.dungeonFloor % 10 === 0);
+            let tierMultiplier = Math.floor((playerState.dungeonFloor - 1) / 10) + 1;
+
+            rooms.forEach((r, idx) => {
+                if (idx === 0) return; // Skip player room
+
+                if (isBossFloor && idx === rooms.length - 1) {
+                    // Spawn Floor Gatekeeper Boss
+                    enemies.push({
+                        x: r.cx, y: r.cy, name: `Dread Gatekeeper (Tier ${tierMultiplier})`,
+                        hp: (55 + playerState.dungeonFloor * 6) * tierMultiplier,
+                        maxHp: (55 + playerState.dungeonFloor * 6) * tierMultiplier,
+                        atk: (6 + playerState.dungeonFloor) * tierMultiplier,
+                        def: 3 * tierMultiplier, xpValue: 120 * tierMultiplier,
+                        color: "#ef4444", isBoss: true, isParalyzed: false
+                    });
+                } else if (Math.random() < 0.55) {
+                    // Spawn Scaled Weight-Based Regular Enemies
+                    let generated = getWeightedEnemyRoll(playerState.dungeonFloor);
+                    let ex = r.x + Math.floor(Math.random() * (r.w - 1));
+                    let ey = r.y + Math.floor(Math.random() * (r.h - 1));
+                    
+                    if (gameMap[ey][ex] === TILE.FLOOR && gameMap[ey][ex] !== TILE.STAIRS_DOWN) {
+                        enemies.push({
+                            x: ex, y: ey, name: generated.name,
+                            hp: generated.hp, maxHp: generated.hp,
+                            atk: generated.atk, def: generated.def,
+                            xpValue: generated.xp, color: generated.color,
+                            isBoss: false, isParalyzed: false
+                        });
+                    }
+                }
+            });
+
+            recalculateSecondaryStats();
+            updateUI();
         }
-    }
 
-    if (tookAction && playerState.hp > 0) processTurn();
-});
+        // Weight Distribution Calculator
+        function getWeightedEnemyRoll(floor) {
+            let pool = [];
+            let totalWeight = 0;
 
-// --- 7. PROCEDURAL MAP GENERATION (CORRECTED ORDER) ---
-function generateMap() {
-    gameMap = []; enemies = []; groundItems = [];
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-        let row = []; for (let x = 0; x < MAP_WIDTH; x++) row.push(TILE.WALL);
-        gameMap.push(row);
-    }
+            MONSTER_TEMPLATES.forEach(m => {
+                if (floor >= m.minFloor) {
+                    let weight = m.baseWeight;
+                    if (m.decay) weight = Math.max(1, m.baseWeight - (floor * m.decay));
+                    if (m.growth) weight = m.baseWeight + (floor * m.growth);
+                    pool.push({ template: m, w: weight });
+                    totalWeight += weight;
+                }
+            });
 
-    let rooms = []; let attempts = 0;
-    while (rooms.length < 10 && attempts < 150) {
-        attempts++; let w = 4 + Math.floor(Math.random() * 5); let h = 4 + Math.floor(Math.random() * 5);
-        let x = 1 + Math.floor(Math.random() * (MAP_WIDTH - w - 1)); let y = 1 + Math.floor(Math.random() * (MAP_HEIGHT - h - 1));
-        
-        let overlap = false;
-        for (let r of rooms) { if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) { overlap = true; break; } }
-        
-        if (!overlap) {
-            let room = { x, y, w, h, cx: Math.floor(x + w / 2), cy: Math.floor(y + h / 2) }; rooms.push(room);
-            for (let ry = y; ry < y + h; ry++) { for (let rx = x; rx < x + w; rx++) gameMap[ry][rx] = TILE.FLOOR; }
-            if (rooms.length > 1) {
-                let prev = rooms[rooms.length - 2];
-                for (let px = Math.min(room.cx, prev.cx); px <= Math.max(room.cx, prev.cx); px++) gameMap[room.cy][px] = TILE.FLOOR;
-                for (let py = Math.min(room.cy, prev.cy); py <= Math.max(room.cy, prev.cy); py++) gameMap[py][prev.cx] = TILE.FLOOR;
+            let roll = Math.random() * totalWeight;
+            let currentSum = 0;
+            for (let p of pool) {
+                currentSum += p.w;
+                if (roll <= currentSum) {
+                    return {
+                        name: p.template.name,
+                        hp: p.template.hp + (floor * 2),
+                        atk: p.template.atk + Math.floor(floor / 2),
+                        def: p.template.def,
+                        xp: p.template.xp,
+                        color: p.template.color
+                    };
+                }
+            }
+            return { name: "Slime", hp: 10, atk: 2, def: 0, xp: 5, color: "#10b981" };
+        }
+
+        function getWeightedLootRoll(floor) {
+            let pool = [];
+            let totalWeight = 0;
+
+            for (let name in ITEM_DB) {
+                let item = ITEM_DB[name];
+                let weight = 10;
+                if (item.rarity === "Common") weight = Math.max(10, 100 - (floor * 5));
+                if (item.rarity === "Uncommon") weight = 30 + (floor * 3);
+                if (item.rarity === "Rare") weight = 5 + (floor * 4);
+                if (item.rarity === "Legendary") weight = 0.5 + (floor * 1.5); // 0.5% base chance on Floor 1
+
+                pool.push({ name, item, w: weight });
+                totalWeight += weight;
+            }
+
+            let roll = Math.random() * totalWeight;
+            let currentSum = 0;
+            for (let p of pool) {
+                currentSum += p.w;
+                if (roll <= currentSum) {
+                    let cloned = JSON.parse(JSON.stringify(p.item));
+                    cloned.name = p.name;
+                    return cloned;
+                }
             }
         }
-    }
 
-    if (rooms.length < 2) { generateMap(); return; }
+        // --- SECONDARY DERIVED CALCULATIONS ---
+        function recalculateSecondaryStats() {
+            playerState.maxHp = 20 + (playerState.stats.wis * 1);
+            playerState.maxMp = 10 + (playerState.stats.int * 1);
+            playerState.hp = Math.min(playerState.hp, playerState.maxHp);
+            playerState.mp = Math.min(playerState.mp, playerState.maxMp);
+        }
 
-    // Map positions setup
-    playerPos = { x: rooms[0].cx, y: rooms[0].cy };
-    let lastRoom = rooms[rooms.length - 1];
+        function getEquipBonus(stat) {
+            let bonus = 0;
+            if (stat === 'dmg' && playerState.equipment.weapon) {
+                bonus += ITEM_DB[playerState.equipment.weapon].bonusDmg || 0;
+            }
+            if (stat === 'def' && playerState.equipment.shield) {
+                bonus += ITEM_DB[playerState.equipment.shield].bonusDef || 0;
+            }
+            return bonus;
+        }
 
-    // 1. Process environmental item decoration & monsters FIRST
-    for (let i = 1; i < rooms.length; i++) {
-        let r = rooms[i];
-        if (Math.random() > 0.4) gameMap[r.y + 1][r.x + 1] = TILE.CHEST_CLOSED;
-        if (Math.random() > 0.6) gameMap[r.y + 2][r.cx] = TILE.TRAP;
-        if (Math.random() > 0.2) {
-            let typeStr = Math.random() > 0.5 ? 'GOBLIN' : 'BAT';
-            let ex = r.x + Math.floor(Math.random() * (r.w - 1)); let ey = r.y + Math.floor(Math.random() * (r.h - 1));
-            if (gameMap[ey][ex] === TILE.FLOOR && (ex !== lastRoom.cx || ey !== lastRoom.cy)) {
-                enemies.push({
-                    x: ex, y: ey, type: typeStr, name: typeStr === 'GOBLIN' ? 'Goblin' : 'Bat',
-                    hp: typeStr === 'GOBLIN' ? 10 + playerState.dungeonFloor * 3 : 5 + playerState.dungeonFloor * 2,
-                    maxHp: typeStr === 'GOBLIN' ? 10 + playerState.dungeonFloor * 3 : 5 + playerState.dungeonFloor * 2,
-                    atk: typeStr === 'GOBLIN' ? 3 + playerState.dungeonFloor : 2 + playerState.dungeonFloor,
-                    xpValue: typeStr === 'GOBLIN' ? 10 : 5
-                });
+        // --- CORE LOGISTICS TURN HANDLING LOOP ---
+        function handlePlayerAction(dx, dy) {
+            if (gameState !== "PLAYING") return;
+
+            let targetX = playerPos.x + dx;
+            let targetY = playerPos.y + dy;
+
+            if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
+
+            let tile = gameMap[targetY][targetX];
+
+            // 1. Collision Attack Resolution
+            let enemyIdx = enemies.findIndex(en => en.x === targetX && en.y === targetY);
+            if (enemyIdx !== -1) {
+                executeMeleeAttack(enemies[enemyIdx]);
+                processMonsterTurns();
+                return;
+            }
+
+            // 2. Walkable Assessment
+            if (tile === TILE.WALL) {
+                document.getElementById('log').innerText = "Blocked by stone walls.";
+                return;
+            }
+
+            // 3. Move Player Coordinates
+            playerPos.x = targetX;
+            playerPos.y = targetY;
+
+            // 4. Trap Trigger Interaction
+            if (tile === TILE.TRAP) {
+                let trapDmg = 4 + Math.floor(Math.random() * 4);
+                playerState.hp -= trapDmg;
+                spawnText(playerPos.x, playerPos.y, `-${trapDmg} Trap!`, '#ef4444');
+                document.getElementById('log').innerHTML = `💥 <span class='danger'>Triggered arrow trap plate! Sustained ${trapDmg} damage.</span>`;
+                gameMap[targetY][targetX] = TILE.FLOOR; // Clear trap
+            }
+
+            // 5. Chest Dynamic Reveal Interaction
+            if (tile === TILE.CHEST_CLOSED) {
+                // Determine 5% Mimic Chance
+                if (Math.random() < 0.05) {
+                    document.getElementById('log').innerHTML = "💥 <span class='danger'>THE CHEST SPRINGS TO LIFE! Teeth snap wildly!</span>";
+                    gameMap[targetY][targetX] = TILE.FLOOR;
+                    enemies.push({
+                        x: targetX, y: targetY, name: 'Flesh-Eating Mimic',
+                        hp: 30 + (playerState.dungeonFloor * 3), maxHp: 30 + (playerState.dungeonFloor * 3),
+                        atk: 6 + playerState.dungeonFloor, def: 2, xpValue: 40, color: "#b91c1c", isBoss: false, isParalyzed: false
+                    });
+                    spawnText(targetX, targetY, "MIMIC!", '#ef4444');
+                } else {
+                    if (playerState.inventory.length >= 10) {
+                        document.getElementById('log').innerText = "🎒 Bag space full! Cannot unlock chest.";
+                        playerPos.x -= dx; playerPos.y -= dy; // Bump back
+                        return;
+                    }
+                    gameMap[targetY][targetX] = TILE.CHEST_OPEN;
+                    let loot = getWeightedLootRoll(playerState.dungeonFloor);
+                    playerState.inventory.push(loot);
+                    document.getElementById('log').innerHTML = `🏆 Found: <span style='color:${RARITY_COLORS[loot.rarity]};'>${loot.name}</span>!`;
+                }
+            }
+
+            processMonsterTurns();
+            updateUI();
+        }
+
+        function executeMeleeAttack(target) {
+            let wpn = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
+            let strikes = wpn?.strikes || 1;
+            let totalDealt = 0;
+
+            for (let s = 0; s < strikes; s++) {
+                if (target.hp <= 0) break;
+
+                let baseDmg = 1 + Math.floor(playerState.stats.str / 4);
+                let wpnDmg = wpn?.bonusDmg || 0;
+                let finalDmg = Math.max(1, (baseDmg + wpnDmg + playerState.floorBoosts.dmg) - target.def);
+
+                target.hp -= finalDmg;
+                totalDealt += finalDmg;
+                spawnText(target.x, target.y, `-${finalDmg}`, s === 0 ? '#ef4444' : '#f43f5e');
+            }
+
+            document.getElementById('log').innerText = `💥 Dealt ${totalDealt} physical damage to ${target.name}.`;
+
+            // Lifesteal Passive
+            if (wpn?.lifesteal && totalDealt > 0) {
+                let heal = Math.floor(totalDealt * wpn.lifesteal);
+                if (heal > 0) {
+                    playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
+                    spawnText(playerPos.x, playerPos.y, `+${heal} HP`, '#10b981');
+                }
+            }
+
+            // Defeat Handling
+            if (target.hp <= 0) {
+                let idx = enemies.indexOf(target);
+                enemies.splice(idx, 1);
+                
+                if (target.isBoss) {
+                    playerState.hasBossKey = true;
+                    document.getElementById('log').innerHTML = "🔑 <span class='legendary'>BOSS DEFEATED! The key to the deep stairs is yours.</span>";
+                    spawnText(target.x, target.y, "🔑 KEY", '#fbbf24');
+                } else {
+                    document.getElementById('log').innerText += ` Slain! Gained ${target.xpValue} EXP.`;
+                }
+
+                // Treasure Scarab Bonus Drops
+                let template = MONSTER_TEMPLATES.find(m => m.name === target.name);
+                if (template?.isTreasureScarab) {
+                    playerState.gold += 80 + (playerState.dungeonFloor * 20);
+                }
+
+                playerState.exp += target.xpValue;
+                if (playerState.exp >= playerState.maxExp) {
+                    playerState.level++;
+                    playerState.exp -= playerState.maxExp;
+                    playerState.maxExp = Math.floor(playerState.maxExp * 1.5);
+                    playerState.statPoints += 2;
+                    playerState.hp = playerState.maxHp;
+                    playerState.mp = playerState.maxMp;
+                    document.getElementById('log').innerHTML = "🌟 <span class='bonus'>LEVEL UP! Health/Mana restored. +2 Stat points allocated!</span>";
+                    spawnText(playerPos.x, playerPos.y, "LEVEL UP!", '#fbbf24');
+                }
             }
         }
-    }
 
-    // 2. Lay down the level transitions LAST so nothing can overwrite them
-    gameMap[playerPos.y][playerPos.x] = TILE.STAIRS_UP;
-    gameMap[lastRoom.cy][lastRoom.cx] = TILE.STAIRS_DOWN;
-}
+        // --- ENEMY AI PASS LOOP ---
+        function processMonsterTurns() {
+            enemies.forEach(en => {
+                if (en.hp <= 0) return;
 
-// --- 8. RENDER RENDITIONS ---
-function drawSprite(key, gridX, gridY) {
-    const spr = SPRITE_MAP[key]; if (!spr) return;
-    let screenX = gridX - camX; let screenY = gridY - camY;
-    if (screenX >= 0 && screenX < VIEW_WIDTH && screenY >= 0 && screenY < VIEW_HEIGHT) {
-        gCtx.drawImage(spriteSheet, spr.col * SHEET_GRID, spr.row * SHEET_GRID, SHEET_GRID, SHEET_GRID, screenX * GAME_TILE, screenY * GAME_TILE, GAME_TILE, GAME_TILE);
-    }
-}
+                if (en.isParalyzed) {
+                    en.isParalyzed = false; 
+                    spawnText(en.x, en.y, "⚡ Paralyzed", '#94a3b8');
+                    return;
+                }
 
-function gameLoop() {
-    gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+                let dist = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
+                if (dist === 1) {
+                    // Attack Player Block
+                    if (playerState.shieldStacks > 0) {
+                        playerState.shieldStacks--;
+                        document.getElementById('log').innerHTML = "🛡️ <span style='color:#38bdf8;'>Shield spell absorbed the blow completely!</span>";
+                        spawnText(playerPos.x, playerPos.y, "ABSORBED", '#38bdf8');
+                    } else {
+                        let finalAtk = Math.max(1, en.atk - (getEquipBonus('def') + playerState.floorBoosts.def));
+                        playerState.hp -= finalAtk;
+                        spawnText(playerPos.x, playerPos.y, `-${finalAtk}`, '#ef4444');
+                        document.getElementById('log').innerHTML = `💔 ${en.name} strikes you for <span class='danger'>${finalAtk} damage</span>.`;
+                    }
+                } else if (dist < 7) {
+                    // Primitive Aggro Chase Pathing
+                    let stepX = Math.sign(playerPos.x - en.x);
+                    let stepY = Math.sign(playerPos.y - en.y);
 
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-        for (let x = 0; x < MAP_WIDTH; x++) {
-            let t = gameMap[y][x];
-            if (t !== TILE.WALL) drawSprite('FLOOR', x, y);
-            if (t === TILE.WALL) drawSprite('WALL', x, y);
-            if (t === TILE.STAIRS_UP) drawSprite('STAIRS_UP', x, y);
-            if (t === TILE.STAIRS_DOWN) drawSprite('STAIRS_DOWN', x, y);
-            if (t === TILE.CHEST_CLOSED) drawSprite('CHEST_CLOSED', x, y);
-            if (t === TILE.CHEST_OPEN) drawSprite('CHEST_OPEN', x, y);
-            if (t === TILE.TRAP) { if (playerState.stats.dex >= 12) drawSprite('TRAP', x, y); else drawSprite('FLOOR', x, y); }
+                    let nextX = en.x + stepX;
+                    let nextY = en.y;
+
+                    // Try moving horizontally, if blocked try vertically
+                    if (gameMap[en.y][nextX] === TILE.FLOOR && !enemies.some(e => e.x === nextX && e.y === en.y)) {
+                        en.x = nextX;
+                    } else if (gameMap[en.y + stepY][en.x] === TILE.FLOOR && !enemies.some(e => e.x === en.x && e.y === en.y + stepY)) {
+                        en.y += stepY;
+                    }
+                }
+            });
+
+            if (playerState.hp <= 0) {
+                gameState = "DEAD";
+                document.getElementById('log').innerHTML = "💀 <span class='danger'>YOU HAVE DIED. Refresh browser page to restore checkpoint.</span>";
+            }
         }
-    }
 
-    groundItems.forEach(item => { drawSprite('LOOT_BAG', item.x, item.y); });
+        // --- UNIFIED SPELL PROCESSING ENGINE ---
+        function castSpell(keyStr) {
+            let spell = SPELL_BOOK[keyStr];
+            if (!spell || gameState !== "PLAYING") return;
 
-    enemies.forEach(en => {
-        drawSprite(en.type, en.x, en.y);
-        let sX = en.x - camX; let sY = en.y - camY;
-        if (sX >= 0 && sX < VIEW_WIDTH && sY >= 0 && sY < VIEW_HEIGHT) {
-            gCtx.fillStyle = 'black'; gCtx.fillRect(sX * GAME_TILE + 2, sY * GAME_TILE - 4, 28, 4);
-            gCtx.fillStyle = '#ef4444'; gCtx.fillRect(sX * GAME_TILE + 2, sY * GAME_TILE - 4, Math.max(0, (en.hp / en.maxHp) * 28), 4);
+            let book = playerState.equipment.shield ? ITEM_DB[playerState.equipment.shield] : null;
+            let finalCost = Math.ceil(spell.cost * (book?.spellCostMod || 1.0));
+            let powerMod = book?.spellPowerMod || 1.0;
+
+            if (playerState.mp < finalCost) {
+                document.getElementById('log').innerText = `❌ Insufficient Mana! Requires ${finalCost} MP. Invest in INT.`;
+                return;
+            }
+
+            let target = null;
+            let closestDist = 5;
+            enemies.forEach(en => {
+                let d = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
+                if (d < closestDist) { closestDist = d; target = en; }
+            });
+
+            let intBonus = playerState.stats.int;
+
+            function evalMagicDmg(base, elem, eObj) {
+                let raw = Math.floor(base * powerMod);
+                let t = MONSTER_TEMPLATES.find(m => m.name === eObj.name) || {};
+                if (t.weaknesses?.[elem]) { raw = Math.floor(raw * t.weaknesses[elem]); spawnText(eObj.x, eObj.y, "WEAKNESS!", '#fbbf24'); }
+                if (t.resistances?.[elem]) { raw = Math.floor(raw * t.resistances[elem]); spawnText(eObj.x, eObj.y, "Resisted", '#94a3b8'); }
+                return Math.max(1, raw);
+            }
+
+            switch(spell.name) {
+                case "Magic Missile":
+                    if (!target) return;
+                    playerState.mp -= finalCost;
+                    let mm = evalMagicDmg(intBonus, spell.element, target);
+                    target.hp -= mm; spawnText(target.x, target.y, `-${mm}`, '#a855f7');
+                    document.getElementById('log').innerText = `✨ Magic Missile zapped ${target.name} for ${mm} damage.`;
+                    break;
+
+                case "Arcane Blast":
+                    playerState.mp -= finalCost;
+                    enemies.forEach(en => {
+                        if (Math.abs(en.x - playerPos.x) <= 1 && Math.abs(en.y - playerPos.y) <= 1) {
+                            let ab = evalMagicDmg(Math.floor(intBonus * 1.2), spell.element, en);
+                            en.hp -= ab; spawnText(en.x, en.y, `-${ab} 💥`, '#a855f7');
+                        }
+                    });
+                    document.getElementById('log').innerText = "💥 Arcane Blast detonated outwards around your tile grid space.";
+                    break;
+
+                case "Firebolt":
+                    if (!target) return;
+                    playerState.mp -= finalCost;
+                    let fb = evalMagicDmg(Math.floor(intBonus * 1.2), spell.element, target);
+                    target.hp -= fb; spawnText(target.x, target.y, `-${fb} 🔥`, '#ef4444');
+                    break;
+
+                case "Fireball":
+                    if (!target) return;
+                    playerState.mp -= finalCost;
+                    let tx = target.x, ty = target.y;
+                    enemies.forEach(en => {
+                        if (Math.abs(en.x - tx) <= 1 && Math.abs(en.y - ty) <= 1) {
+                            let f = evalMagicDmg(Math.floor(intBonus * 1.5), spell.element, en);
+                            en.hp -= f; spawnText(en.x, en.y, `-${f} ☄️`, '#f97316');
+                        }
+                    });
+                    document.getElementById('log').innerText = "☄️ Fireball exploded splashing damage across adjacent tiles!";
+                    break;
+
+                case "Frost Ray":
+                    if (!target) return;
+                    playerState.mp -= finalCost;
+                    let dx = Math.sign(target.x - playerPos.x), dy = Math.sign(target.y - playerPos.y);
+                    enemies.forEach(en => {
+                        if ((en.y - playerPos.y) * dx - (en.x - playerPos.x) * dy === 0) {
+                            let fr = evalMagicDmg(intBonus, spell.element, en);
+                            en.hp -= fr; spawnText(en.x, en.y, `-${fr} ❄️`, '#60a5fa');
+                        }
+                    });
+                    document.getElementById('log').innerText = "❄️ Frost Ray channels freezing paths in a straight line trajectory.";
+                    break;
+
+                case "Blizzard":
+                    playerState.mp -= finalCost;
+                    enemies.forEach(en => {
+                        let b = evalMagicDmg(Math.floor(intBonus * 1.4), spell.element, en);
+                        en.hp -= b; spawnText(en.x, en.y, `-${b} 🌨️`, '#38bdf8');
+                    });
+                    document.getElementById('log').innerText = "🌨️ Biting Blizzard strikes all monsters currently present inside the layout chambers.";
+                    break;
+
+                case "Spark":
+                    if (!target) return;
+                    playerState.mp -= finalCost;
+                    let spk = evalMagicDmg(Math.floor(intBonus * 0.8), spell.element, target);
+                    target.hp -= spk;
+                    if (Math.random() < 0.10) { target.isParalyzed = true; spawnText(target.x, target.y, "⚡ PARALYZED", '#fbbf24'); }
+                    else { spawnText(target.x, target.y, `-${spk} ⚡`, '#fbbf24'); }
+                    break;
+
+                case "Lightning Bolt":
+                    if (!target) return;
+                    playerState.mp -= finalCost;
+                    let lb = evalMagicDmg(Math.floor(intBonus * 2.5), spell.element, target);
+                    target.hp -= lb; spawnText(target.x, target.y, `-${lb} ⚡⚡`, '#fbbf24');
+                    break;
+
+                case "Shield":
+                    playerState.mp -= finalCost;
+                    playerState.shieldStacks = 3;
+                    spawnText(playerPos.x, playerPos.y, "🛡️ ACCRUED", '#38bdf8');
+                    document.getElementById('log').innerText = "🛡️ Arcane barrier deployed! Next 3 attacks will absorb cleanly.";
+                    break;
+
+                case "Teleport":
+                    playerState.mp -= finalCost;
+                    let safelyPlaced = false;
+                    while (!safelyPlaced) {
+                        let rx = Math.floor(Math.random() * MAP_WIDTH);
+                        let ry = Math.floor(Math.random() * MAP_HEIGHT);
+                        if (gameMap[ry][rx] === TILE.FLOOR) { playerPos.x = rx; playerPos.y = ry; safelyPlaced = true; }
+                    }
+                    spawnText(playerPos.x, playerPos.y, "🌀 WARP", '#a855f7');
+                    break;
+
+                case "Banish":
+                    if (!target || target.isBoss) return;
+                    playerState.mp -= finalCost;
+                    enemies.splice(enemies.indexOf(target), 1);
+                    document.getElementById('log').innerText = "💨 Target banished from dimensional space. Yielded 0 EXP.";
+                    break;
+            }
+
+            // Cleanup any monsters slain by spellcasting
+            enemies = enemies.filter(en => {
+                if (en.hp <= 0 && en.isBoss) { playerState.hasBossKey = true; spawnText(en.x, en.y, "🔑 KEY", '#fbbf24'); }
+                return en.hp > 0;
+            });
+
+            processMonsterTurns();
+            updateUI();
         }
-    });
 
-    if (playerState.hp > 0) drawSprite('HERO', playerPos.x, playerPos.y); 
+        // --- LOOK / EXAMINE TACTICAL HOOK ---
+        function processExamineStep(key) {
+            if (key === 'w' || key === 'ArrowUp') examineCursor.y--;
+            if (key === 's' || key === 'ArrowDown') examineCursor.y++;
+            if (key === 'a' || key === 'ArrowLeft') examineCursor.x--;
+            if (key === 'd' || key === 'ArrowRight') examineCursor.x++;
 
-    for (let i = floatTexts.length - 1; i >= 0; i--) {
-        let ft = floatTexts[i]; let fX = ft.x - camX; let fY = ft.y - camY;
-        if (fX >= 0 && fX < VIEW_WIDTH && fY >= 0 && fY < VIEW_HEIGHT) {
-            gCtx.fillStyle = 'rgba(0,0,0,0.8)'; gCtx.font = "bold 16px Courier New";
-            gCtx.fillText(ft.text, (fX * GAME_TILE) + 4 + 1, (fY * GAME_TILE) + 4 - ft.offset + 1); 
-            gCtx.fillStyle = ft.color; gCtx.fillText(ft.text, (fX * GAME_TILE) + 4, (fY * GAME_TILE) + 4 - ft.offset);
+            examineCursor.x = Math.max(0, Math.min(examineCursor.x, MAP_WIDTH - 1));
+            examineCursor.y = Math.max(0, Math.min(examineCursor.y, MAP_HEIGHT - 1));
+
+            let ex = examineCursor.x, ey = examineCursor.y;
+            let en = enemies.find(e => e.x === ex && e.y === ey);
+            let item = groundItems.find(i => i.x === ex && i.y === ey);
+            let tile = gameMap[ey][ex];
+
+            if (en) {
+                let t = MONSTER_TEMPLATES.find(m => m.name === en.name) || {};
+                let desc = t.examineText || "A dark dungeon anomaly.";
+                let dangerText = en.atk >= playerState.hp ? "<span class='danger'>DEADLY (Can 1-shot you!)</span>" : "<span class='bonus'>MANAGEABLE</span>";
+                document.getElementById('log').innerHTML = `🔎 <strong>${en.name}</strong>: "${desc}" <br>Threat evaluation: ${dangerText}`;
+            } else if (tile === TILE.CHEST_CLOSED) {
+                document.getElementById('log').innerText = "🔎 Treasure Chest structure. Might contain gear, or could be a hidden mimic...";
+            } else if (tile === TILE.STAIRS_DOWN) {
+                document.getElementById('log').innerText = "🔎 Dark staircase opening leading down deeper into the next layout floor.";
+            } else {
+                document.getElementById('log').innerText = `🔎 Inspecting coordinates [${ex}, ${ey}]. Clean passage space.`;
+            }
         }
-        ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
-    }
-    requestAnimationFrame(gameLoop);
-}
-</script>
+
+        // --- PERSISTENCE TOWN PORTAL & SAVING ---
+        function travelToTown() {
+            playerState.hp = playerState.maxHp;
+            playerState.mp = playerState.maxMp;
+            
+            // Calculate base boundary of current 10-floor safety chunk
+            let chunkStart = Math.floor((playerState.dungeonFloor - 1) / 10) * 10 + 1;
+            playerState.dungeonFloor = chunkStart;
+            playerState.floorBoosts.dmg = 0;
+            playerState.floorBoosts.def = 0;
+
+            document.getElementById('log').innerHTML = "🏡 <span class='bonus'>Returned to safe town hub! Restored health/mana pools. Returning to dungeon resets you to start of current chunk floor.</span>";
+            generateMap();
+        }
+
+        function saveGameCheckpoint() {
+            localStorage.setItem('oddy_save_floor', playerState.highestReachedFloor);
+            localStorage.setItem('oddy_save_state', JSON.stringify(playerState));
+        }
+
+        function loadGameCheckpoint() {
+            let saved = localStorage.getItem('oddy_save_state');
+            if (saved) {
+                playerState = JSON.parse(saved);
+                document.getElementById('log').innerText = "💾 Restored safe saved progress from your last descent!";
+            }
+        }
+
+        // --- FLOATING ENGINE TEXT EFFECTS ---
+        function spawnText(x, y, text, color) {
+            floatingTexts.push({ x: x * TILE_SIZE + 8, y: y * TILE_SIZE, text, color, timer: 35 });
+        }
+
+        // --- GRAPHICS CANVAS RENDERER PASS ---
+        function gameLoop() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Center Camera Tracking
+            let camX = Math.max(0, Math.min(playerPos.x - VIEW_WIDTH / 2, MAP_WIDTH - VIEW_WIDTH));
+            let camY = Math.max(0, Math.min(playerPos.y - VIEW_HEIGHT / 2, MAP_HEIGHT - VIEW_HEIGHT));
+
+            // 1. Draw Map Layer
+            for (let y = 0; y < VIEW_HEIGHT; y++) {
+                for (let x = 0; x < VIEW_WIDTH; x++) {
+                    let mx = Math.floor(camX + x);
+                    let my = Math.floor(camY + y);
+                    let tile = gameMap[my][mx];
+
+                    let scrX = x * TILE_SIZE;
+                    let scrY = y * TILE_SIZE;
+
+                    if (tile === TILE.WALL) {
+                        ctx.fillStyle = "#374151"; ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = "#1f2937"; ctx.strokeRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
+                    } else if (tile === TILE.FLOOR || tile === TILE.TRAP) {
+                        ctx.fillStyle = "#111827"; ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
+                        // Subtle grid points matching minimal art layout
+                        ctx.fillStyle = "#1f2937"; ctx.fillRect(scrX + 14, scrY + 14, 4, 4);
+                    } else if (tile === TILE.STAIRS_DOWN) {
+                        ctx.fillStyle = "#047857"; ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = "#065f46"; ctx.fillRect(scrX + 4, scrY + 4, 24, 6);
+                        ctx.fillRect(scrX + 8, scrY + 14, 16, 6);
+                    } else if (tile === TILE.CHEST_CLOSED) {
+                        ctx.fillStyle = "#78350f"; ctx.fillRect(scrX + 6, scrY + 8, 20, 18);
+                        ctx.fillStyle = "#d97706"; ctx.fillRect(scrX + 14, scrY + 14, 4, 6); // Lock block
+                    } else if (tile === TILE.CHEST_OPEN) {
+                        ctx.fillStyle = "#451a03"; ctx.fillRect(scrX + 6, scrY + 12, 20, 14);
+                    }
+                }
+            }
+
+            // 2. Draw Loot Items on Ground
+            groundItems.forEach(item => {
+                let sx = item.x - camX; let sy = item.y - camY;
+                if (sx >= 0 && sx < VIEW_WIDTH && sy >= 0 && sy < VIEW_HEIGHT) {
+                    ctx.fillStyle = RARITY_COLORS[item.rarity] || "#fbbf24";
+                    ctx.beginPath(); ctx.arc(sx * TILE_SIZE + 16, sy * TILE_SIZE + 16, 6, 0, Math.PI * 2); ctx.fill();
+                }
+            });
+
+            // 3. Draw Active Enemies Layer
+            enemies.forEach(en => {
+                let sx = en.x - camX; let sy = en.y - camY;
+                if (sx >= 0 && sx < VIEW_WIDTH && sy >= 0 && sy < VIEW_HEIGHT) {
+                    ctx.fillStyle = en.color;
+                    ctx.fillRect(sx * TILE_SIZE + 4, sy * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+
+                    // Health Indicator bars overlaying the entity space
+                    let pct = en.hp / en.maxHp;
+                    ctx.fillStyle = "#b91c1c"; ctx.fillRect(sx * TILE_SIZE + 2, sy * TILE_SIZE - 2, TILE_SIZE - 4, 4);
+                    ctx.fillStyle = "#10b981"; ctx.fillRect(sx * TILE_SIZE + 2, sy * TILE_SIZE - 2, (TILE_SIZE - 4) * pct, 4);
+                }
+            });
+
+            // 4. Draw Player Entity Token
+            let psx = playerPos.x - camX;
+            let psy = playerPos.y - camY;
+            ctx.fillStyle = "#fbbf24"; // Vibrant Golden Character Box
+            ctx.fillRect(psx * TILE_SIZE + 6, psy * TILE_SIZE + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+            
+            // Draw visual blue aura rings if magical shield is active
+            if (playerState.shieldStacks > 0) {
+                ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2;
+                ctx.strokeRect(psx * TILE_SIZE + 2, psy * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            }
+
+            // 5. Draw Tactical Flashing Reticle in Examine Window State
+            if (gameState === "EXAMINE") {
+                let esx = examineCursor.x - camX;
+                let esy = examineCursor.y - camY;
+                if (esx >= 0 && esx < VIEW_WIDTH && esy >= 0 && esy < VIEW_HEIGHT) {
+                    ctx.strokeStyle = (Math.floor(Date.now() / 200) % 2 === 0) ? '#fbbf24' : '#ef4444';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(esx * TILE_SIZE + 1, esy * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+                }
+            }
+
+            // 6. Draw Text Ticks Engine Update
+            ctx.font = "bold 13px Courier New";
+            floatingTexts.forEach((t, idx) => {
+                ctx.fillStyle = t.color;
+                ctx.fillText(t.text, t.x - (camX * TILE_SIZE), t.y - (camY * TILE_SIZE));
+                t.y -= 0.6; t.timer--;
+            });
+            floatingTexts = floatingTexts.filter(t => t.timer > 0);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- INTERFACE CANVAS INPUT MANAGEMENT HANDLERS ---
+        window.addEventListener('keydown', (e) => {
+            if (gameState === "DEAD") return;
+
+            // Toggle Examine State Window Interceptor
+            if (e.key === 'x' || e.key === 'X') {
+                if (gameState === "PLAYING") {
+                    gameState = "EXAMINE";
+                    examineCursor.x = playerPos.x; examineCursor.y = playerPos.y;
+                    document.getElementById('log').innerText = "🔎 EXAMINE MODE: Move around using WASD/Arrows. Press [X] or [Esc] to return.";
+                } else {
+                    gameState = "PLAYING"; document.getElementById('log').innerText = "Returned to exploration fields.";
+                }
+                updateUI(); return;
+            }
+
+            if (gameState === "EXAMINE") {
+                if (e.key === 'Escape') { gameState = "PLAYING"; document.getElementById('log').innerText = "Returned to exploration fields."; }
+                else { processExamineStep(e.key); }
+                return;
+            }
+
+            // Standard Navigation Input Actions
+            if (e.key === 'w' || e.key === 'ArrowUp')    handlePlayerAction(0, -1);
+            if (e.key === 's' || e.key === 'ArrowDown')  handlePlayerAction(0, 1);
+            if (e.key === 'a' || e.key === 'ArrowLeft')  handlePlayerAction(-1, 0);
+            if (e.key === 'd' || e.key === 'ArrowRight') handlePlayerAction(1, 0);
+
+            // Open/Close Inventory Window Overlay
+            if (e.key === 'i' || e.key === 'I') toggleInventory();
+            if (e.key === 'Escape') document.getElementById('inv-modal').style.display = 'none';
+
+            // Descent Verification Hook Handler
+            if (e.key === 'Enter') {
+                if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
+                    let isBossFloor = (playerState.dungeonFloor % 10 === 0);
+                    if (isBossFloor && !playerState.hasBossKey) {
+                        document.getElementById('log').innerHTML = "❌ <span class='danger'>Staircase gate locked! Destroy the tier guardian boss to claim the exit key.</span>";
+                        spawnText(playerPos.x, playerPos.y, "LOCKED", '#ef4444');
+                    } else {
+                        playerState.dungeonFloor++;
+                        if (playerState.dungeonFloor > playerState.highestReachedFloor) {
+                            playerState.highestReachedFloor = playerState.dungeonFloor;
+                        }
+                        // Clear active buffs on transition
+                        playerState.floorBoosts.dmg = 0;
+                        playerState.floorBoosts.def = 0;
+                        
+                        saveGameCheckpoint();
+                        generateMap();
+                        document.getElementById('log').innerText = `Descended safely to Floor ${playerState.dungeonFloor}. Checkpoint saved!`;
+                    }
+                }
+            }
+
+            // Pick Up Items Ground Action Hook
+            if (e.key === 'g' || e.key === 'G') {
+                let idx = groundItems.findIndex(i => i.x === playerPos.x && i.y === playerPos.y);
+                if (idx !== -1) {
+                    if (playerState.inventory.length >= 10) {
+                        document.getElementById('log').innerText = "🎒 Inventory full!";
+                        return;
+                    }
+                    let item = groundItems.splice(idx, 1)[0];
+                    playerState.inventory.push(item);
+                    document.getElementById('log').innerHTML = `Picked up: <span style='color:${RARITY_COLORS[item.rarity]};'>${item.name}</span>`;
+                    updateUI();
+                }
+            }
+
+            // Intercept Number Triggers for Spellcasting Engine Loops
+            if ((e.key >= '0' && e.key <= '9') || e.key === '-') {
+                castSpell(e.key);
+            }
+        });
+
+        // --- INVENTORY MANAGEMENT SCREEN INTERACTIVE SUBSYSTEM ---
+        function toggleInventory() {
+            let modal = document.getElementById('inv-modal');
+            if (modal.style.display === 'flex') { modal.style.display = 'none'; return; }
+            modal.style.display = 'flex';
+
+            let list = document.getElementById('inv-list');
+            list.innerHTML = "";
+
+            if (playerState.inventory.length === 0) { list.innerText = "Bag is completely empty."; return; }
+
+            playerState.inventory.forEach((item, idx) => {
+                let div = document.createElement('div');
+                div.style.background = "#374151"; div.style.padding = "8px"; div.style.borderRadius = "4px";
+                div.style.borderLeft = `4px solid ${RARITY_COLORS[item.rarity]}`;
+
+                let title = `<div style='font-weight:bold; color:${RARITY_COLORS[item.rarity]};'>${item.name} (${item.type})</div>`;
+                let desc = `<div style='font-size:11px; color:#d1d5db; margin:2px 0;'>${item.desc || ""}</div>`;
+                
+                let btnLabel = item.type === "consumable" ? "Consume" : "Equip Piece";
+                let actionBtn = `<button class='btn' style='padding:2px 6px; font-size:11px; margin-top:4px;' onclick='executeInventoryAction(${idx})'>${btnLabel}</button>`;
+
+                div.innerHTML = title + desc + actionBtn;
+                list.appendChild(div);
+            });
+        }
+
+        function executeInventoryAction(idx) {
+            let item = playerState.inventory[idx];
+            if (item.type === "consumable") {
+                playerState.inventory.splice(idx, 1);
+                item.use(playerState);
+                document.getElementById('log').innerText = `Consumed item effect: ${item.name}`;
+            } else if (item.type === "weapon") {
+                let old = playerState.equipment.weapon;
+                playerState.equipment.weapon = item.name;
+                playerState.inventory.splice(idx, 1);
+                if (old) playerState.inventory.push({ name: old, ...ITEM_DB[old] });
+            } else if (item.type === "shield") {
+                let old = playerState.equipment.shield;
+                playerState.equipment.shield = item.name;
+                playerState.inventory.splice(idx, 1);
+                if (old) playerState.inventory.push({ name: old, ...ITEM_DB[old] });
+            }
+            recalculateSecondaryStats();
+            toggleInventory(); toggleInventory(); // Refresh panel context view state
+            updateUI();
+        }
+
+        // --- INTERFACE HUD DYNAMIC UPDATE CALLS ---
+        function updateUI() {
+            document.getElementById('txt-floor').innerText = `Floor ${playerState.dungeonFloor}`;
+            document.getElementById('txt-hp').innerText = `${playerState.hp}/${playerState.maxHp}`;
+            document.getElementById('txt-mp').innerText = `${playerState.mp}/${playerState.maxMp}`;
+            document.getElementById('txt-level').innerText = playerState.level;
+            document.getElementById('txt-exp').innerText = `${playerState.exp}/${playerState.maxExp}`;
+            document.getElementById('txt-gold').innerText = playerState.gold;
+
+            document.getElementById('txt-str').innerText = playerState.stats.str;
+            document.getElementById('txt-int').innerText = playerState.stats.int;
+            document.getElementById('txt-wis').innerText = playerState.stats.wis;
+
+            let wpn = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
+            document.getElementById('txt-wpn').innerHTML = wpn ? `<span style='color:${RARITY_COLORS[wpn.rarity]};'>${playerState.equipment.weapon} (+${wpn.bonusDmg} Dmg)</span>` : "None (+0)";
+
+            let shd = playerState.equipment.shield ? ITEM_DB[playerState.equipment.shield] : null;
+            document.getElementById('txt-shd').innerHTML = shd ? `<span style='color:${RARITY_COLORS[shd.rarity]};'>${playerState.equipment.shield} (+${shd.bonusDef} Def)</span>` : "None (+0)";
+
+            // Handle Skill Point allocations visibility toggling display indicators
+            let btns = document.querySelectorAll('.btn-stat');
+            if (playerState.statPoints > 0) {
+                document.getElementById('txt-points').style.display = "block";
+                document.getElementById('txt-points').innerText = `${playerState.statPoints} Points Available!`;
+                btns.forEach(b => b.style.display = "inline-block");
+            } else {
+                document.getElementById('txt-points').style.display = "none";
+                btns.forEach(b => b.style.display = "none");
+            }
+
+            // Render Active temporary floor modifiers buffs
+            let buffStr = "";
+            if (playerState.floorBoosts.dmg > 0) buffStr += `💪 Floor ATK: +${playerState.floorBoosts.dmg} `;
+            if (playerState.floorBoosts.def > 0) buffStr += `🛡️ Floor DEF: +${playerState.floorBoosts.def} `;
+            if (playerState.shieldStacks > 0) buffStr += `✨ Shield Blocks: ${playerState.shieldStacks}`;
+            document.getElementById('txt-active-buffs').innerText = buffStr;
+        }
+
+        function upgradeStat(statName) {
+            if (playerState.statPoints > 0) {
+                playerState.statPoints--;
+                playerState.stats[statName]++;
+                recalculateSecondaryStats();
+                updateUI();
+            }
+        }
+
+        // --- ENGINE STARTUP INTERACTION RUNNERS ---
+        loadGameCheckpoint();
+        generateMap();
+        gameLoop();
+    </script>
 </body>
 </html>
