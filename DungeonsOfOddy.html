@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Advanced Procedural Edition</title>
+    <title>Dungeon Engine - Full Gameplay Loop Build</title>
     <style>
         /* --- MODERN SLATE & DARK FANTASY PALETTE --- */
         body {
@@ -190,7 +190,7 @@
 
     <div class="win-application">
         <div class="win-titlebar">
-            <span>Dungeon Engine v2.51 - Bug-Patch Variant</span>
+            <span>Dungeon Engine v2.6 - Complete Loop Matrix</span>
             <div class="win-title-buttons">
                 <button class="win-btn-small">_</button>
                 <button class="win-btn-small">X</button>
@@ -198,8 +198,8 @@
         </div>
 
         <div class="win-menubar">
-            <span class="win-menu-item" onclick="appendLog('Inventory system active.')">Inventory</span>
-            <span class="win-menu-item" onclick="appendLog('STR: 14 | DEX: 12 | CON: 15 | INT: 10')">Stats</span>
+            <span class="win-menu-item" id="menu-town" onclick="toggleTownMenu()">Return to Town (Floor 1)</span>
+            <span class="win-menu-item" id="menu-stats" onclick="toggleStatsMenu()">Print Stats Sheet</span>
             <span class="win-menu-item" onclick="regenerateFloor()">Regen Floor</span>
         </div>
 
@@ -216,7 +216,7 @@
 
         <div class="win-bottom-pane">
             <div class="win-log-box" id="log">
-                <div class="log-entry">Dungeon initialized with advanced vector styling features.</div>
+                <div class="log-entry">Engine booted. Clear Floor 1 then return up to town, or delve deeper down!</div>
             </div>
 
             <div class="win-status-box">
@@ -230,7 +230,7 @@
     </div>
 
     <div class="hint-text">
-        Move: <b>WASD / Arrow Keys</b>. Automated recovery setup: <b>R Key</b>. Descend Stairs: <b>Enter / Stairs Button</b>.
+        Move: <b>WASD / Arrows</b> | Camp Rest: <b>R Key</b> | Magic: <b>F Key</b> | Town Portal via <b>U Key</b> (Only on Floor 1)
     </div>
 
 <script>
@@ -243,13 +243,14 @@ const TILE = { WALL: 0, FLOOR: 1, STAIRS_DOWN: 2 };
 
 let playerState = {
     stats: { str: 14, dex: 12, con: 15, int: 10 },
-    hp: 15, maxHp: 40, mp: 5, maxMp: 25, gold: 150,
+    hp: 40, maxHp: 40, mp: 25, maxMp: 25, gold: 150,
     dungeonFloor: 1, charLevel: 1, xp: 0, maxXp: 20
 };
 
 let gameMap = []; let enemies = []; let floatTexts = [];
 let playerPos = { x: 0, y: 0 }; let camX = 0; let camY = 0;
 let isResting = false; let restInterval = null;
+let inTownMenu = false;
 
 function appendLog(msg, type = '') {
     const logBox = document.getElementById('log');
@@ -266,13 +267,78 @@ function updateUI() {
     let gdEl = document.getElementById('ui-gold');
     let xpEl = document.getElementById('ui-xp');
     
-    if(!hpEl || !mpEl || !lvEl || !gdEl || !xpEl) return; // Prevent crashes before window load completes
+    if(!hpEl || !mpEl || !lvEl || !gdEl || !xpEl) return;
 
     hpEl.innerText = `${playerState.hp}/${playerState.maxHp}`;
     mpEl.innerText = `${playerState.mp}/${playerState.maxMp}`;
-    lvEl.innerText = playerState.dungeonFloor;
+    lvEl.innerText = inTownMenu ? "Town" : playerState.dungeonFloor;
     gdEl.innerText = playerState.gold;
     xpEl.innerText = `${playerState.charLevel} (${playerState.xp}/${playerState.maxXp})`;
+}
+
+// --- INTERACTIVE TOWN INTERFACE METRICS ---
+function toggleTownMenu() {
+    if (playerState.dungeonFloor !== 1 && !inTownMenu) {
+        appendLog("🚫 Escape denied! You must climb back up to Floor 1 to retreat to Town!", "log-important");
+        return;
+    }
+    
+    inTownMenu = !inTownMenu;
+    if (inTownMenu) {
+        if(isResting) { clearInterval(restInterval); isResting = false; }
+        appendLog("🌟 Welcome back to the Surface Sanctuary. Spend gold safely without ambush checks!", "log-success");
+    } else {
+        appendLog("⚔️ Re-entering the deep crypt structural grid...");
+        generateProceduralDungeon();
+    }
+    updateUI();
+}
+
+function buyStat(statName) {
+    if (!inTownMenu) return;
+    if (playerState.gold >= 50) {
+        playerState.gold -= 50;
+        playerState.stats[statName] += 2;
+        appendLog(`📈 Attributes Upgrade: ${statName.toUpperCase()} increased by +2!`, "log-success");
+        if(statName === 'con') { playerState.maxHp += 5; playerState.hp += 5; }
+        if(statName === 'int') { playerState.maxMp += 5; playerState.mp += 5; }
+        updateUI();
+    } else {
+        appendLog("❌ Insufficient funds! Attribute training sessions require 50 Gold.", "log-important");
+    }
+}
+
+function buyHealing() {
+    if (!inTownMenu) return;
+    if (playerState.gold >= 20) {
+        playerState.gold -= 20;
+        playerState.hp = playerState.maxHp;
+        playerState.mp = playerState.maxMp;
+        appendLog("💖 The Sanctuary Altar completely restores your Health and Spell Pools!", "log-success");
+        updateUI();
+    } else {
+        appendLog("❌ You don't have enough gold for the sanctuary restoration (20 Gold).", "log-important");
+    }
+}
+
+function checkLevelUp() {
+    if (playerState.xp >= playerState.maxXp) {
+        playerState.xp -= playerState.maxXp;
+        playerState.charLevel++;
+        playerState.maxXp = Math.floor(playerState.maxXp * 1.6);
+        
+        playerState.maxHp += 6;
+        playerState.maxMp += 3;
+        playerState.hp = playerState.maxHp;
+        playerState.mp = playerState.maxMp;
+        
+        appendLog(`🎉 LEVEL UP! You reached Character Level ${playerState.charLevel}! Core capabilities expanded.`, "log-success");
+        spawnText(playerPos.x, playerPos.y, "LEVEL UP!", "#eab308");
+    }
+}
+
+function toggleStatsMenu() {
+    appendLog(`📊 SHEET DATA -> STR (Melee Bonus): ${playerState.stats.str} | CON (Defense Mitigation): ${playerState.stats.con} | DEX (Evasion Dodge): ${playerState.stats.dex} | INT (Spell Scalar): ${playerState.stats.int}`, "log-success");
 }
 
 function updateCamera() {
@@ -280,7 +346,7 @@ function updateCamera() {
     camY = Math.max(0, Math.min(playerPos.y - Math.floor(VIEW_HEIGHT / 2), MAP_HEIGHT - VIEW_HEIGHT));
 }
 
-// --- FULL ROOM-CONNECT PROCEDURAL DUNGEON GENERATOR ---
+// --- PROCEDURAL ARCHITECTURE ENGINE ---
 function generateProceduralDungeon() {
     gameMap = [];
     enemies = [];
@@ -316,11 +382,9 @@ function generateProceduralDungeon() {
 
             if (rooms.length > 1) {
                 let prev = rooms[rooms.length - 2];
-                // Horizontal corridor tunnels
                 for (let px = Math.min(newRoom.cx, prev.cx); px <= Math.max(newRoom.cx, prev.cx); px++) {
                     gameMap[newRoom.cy][px] = TILE.FLOOR;
                 }
-                // Vertical corridor tunnels
                 for (let py = Math.min(newRoom.cy, prev.cy); py <= Math.max(newRoom.cy, prev.cy); py++) {
                     gameMap[py][prev.cx] = TILE.FLOOR;
                 }
@@ -329,7 +393,6 @@ function generateProceduralDungeon() {
     }
 
     if(rooms.length === 0) {
-        // Safe fallback build loop if random values completely miss carving bounds
         rooms.push({x: 5, y: 5, w: 6, h: 6, cx: 8, cy: 8});
         for(let rY=5; rY<11; rY++) for(let rX=5; rX<11; rX++) gameMap[rY][rX] = TILE.FLOOR;
     }
@@ -338,14 +401,15 @@ function generateProceduralDungeon() {
     let escapeRoom = rooms[rooms.length - 1];
     gameMap[escapeRoom.cy][escapeRoom.cx] = TILE.STAIRS_DOWN;
 
+    // Difficulty depth scaling math modifier
     for (let i = 1; i < rooms.length; i++) {
         let r = rooms[i];
         if (Math.random() > 0.3) {
             enemies.push({
                 x: r.cx, y: r.cy,
                 name: Math.random() > 0.5 ? "Crystalline Golem" : "Shadow Fiend",
-                hp: 12 + playerState.dungeonFloor * 2,
-                maxHp: 12 + playerState.dungeonFloor * 2,
+                hp: 10 + playerState.dungeonFloor * 4,
+                maxHp: 10 + playerState.dungeonFloor * 4,
                 atk: 3 + playerState.dungeonFloor
             });
         }
@@ -356,11 +420,12 @@ function generateProceduralDungeon() {
 }
 
 function regenerateFloor() {
+    if(inTownMenu) return;
     appendLog("Forced regeneration of layout...");
     generateProceduralDungeon();
 }
 
-// --- AMBUSH REST SYSTEM MECHANISM ---
+// --- TURNS & MECHANICS LOOPS ---
 function handleRestTick() {
     if (playerState.hp <= 0 || !isResting) {
         if(restInterval) clearInterval(restInterval);
@@ -368,7 +433,7 @@ function handleRestTick() {
         return;
     }
 
-    // 25% Ambush processing evaluation loop
+    // Risk-check evaluation sequence
     if (Math.random() < 0.25) {
         if(restInterval) clearInterval(restInterval);
         isResting = false;
@@ -377,11 +442,11 @@ function handleRestTick() {
         for (let o of offsets) {
             let tx = playerPos.x + o.x; let ty = playerPos.y + o.y;
             if (gameMap[ty] && gameMap[ty][tx] === TILE.FLOOR) {
-                enemies.push({ x: tx, y: ty, name: "Wandering Nightstalker", hp: 10, maxHp: 10, atk: 4 });
+                enemies.push({ x: tx, y: ty, name: "Wandering Nightstalker", hp: 12, maxHp: 12, atk: 4 });
                 break;
             }
         }
-        appendLog("REST INTERRUPTED! A monster caught you off-guard!", "log-important");
+        appendLog("💥 REST INTERRUPTED! A monster caught you sleeping!", "log-important");
         spawnText(playerPos.x, playerPos.y, "Ambushed!", "#f43f5e");
         processTurn();
         return;
@@ -392,28 +457,35 @@ function handleRestTick() {
     playerState.hp += addedHp;
     playerState.mp += addedMp;
 
-    if (addedHp > 0 || addedMp > 0) {
-        appendLog(`Resting... (+${addedHp} HP, +${addedMp} Mana)`);
-    }
+    if (addedHp > 0 || addedMp > 0) appendLog(`Resting... (+${addedHp} HP, +${addedMp} Mana)`);
 
     updateUI();
 
     if (playerState.hp >= playerState.maxHp && playerState.mp >= playerState.maxMp) {
         if(restInterval) clearInterval(restInterval);
         isResting = false;
-        appendLog("Fully recovered to peak health.", "log-success");
+        appendLog("Fully restored to peak vitals.", "log-success");
     }
 }
 
 function processTurn() {
+    if(inTownMenu) return;
+
     enemies.forEach(en => {
         let distance = Math.abs(playerPos.x - en.x) + Math.abs(playerPos.y - en.y);
         if (distance === 1) {
-            let defense = Math.floor(playerState.stats.con / 4);
-            let netDmg = Math.max(1, en.atk - defense);
-            playerState.hp -= netDmg;
-            appendLog(`${en.name} attacks you for ${netDmg} dmg!`, "log-important");
-            spawnText(playerPos.x, playerPos.y, `-${netDmg}`, '#ef4444');
+            // Evasion mechanic calculation using Dexterity
+            let dodgeChance = Math.min(0.45, playerState.stats.dex * 0.02); 
+            if (Math.random() < dodgeChance) {
+                appendLog(`💨 You agilely dodged an attack from ${en.name}!`, "log-success");
+                spawnText(playerPos.x, playerPos.y, "Dodged!", "#38bdf8");
+            } else {
+                let defense = Math.floor(playerState.stats.con / 4);
+                let netDmg = Math.max(1, en.atk - defense);
+                playerState.hp -= netDmg;
+                appendLog(`⚠️ ${en.name} strikes you for ${netDmg} damage!`, "log-important");
+                spawnText(playerPos.x, playerPos.y, `-${netDmg}`, '#ef4444');
+            }
         } else if (distance < 6) {
             let dx = Math.sign(playerPos.x - en.x);
             let dy = Math.sign(playerPos.y - en.y);
@@ -424,7 +496,7 @@ function processTurn() {
 
     if (playerState.hp <= 0) {
         playerState.hp = 0;
-        appendLog("You died! Press 'Regen Floor' to try again.", "log-important");
+        appendLog("💀 DEAD! Hit 'Regen Floor' or head back to town to restart structural states.", "log-important");
     }
     updateCamera();
     updateUI();
@@ -433,39 +505,62 @@ function processTurn() {
 function spawnText(x, y, text, color) { floatTexts.push({ x, y, text, color, life: 25, offset: 0 }); }
 function triggerAction(key) { window.dispatchEvent(new KeyboardEvent('keydown', { key: key })); }
 
-// --- CONTROLLER HANDLERS LISTENER AGENTS ---
+// --- KEYBOARD LISTENER MATRICES ---
 window.addEventListener('keydown', (e) => {
-    if (playerState.hp <= 0 || isResting) return;
+    if (playerState.hp <= 0 || isResting) {
+        // Allow menu recovery exit vectors on death
+        if (inTownMenu && e.key === 'h') buyHealing();
+        return;
+    }
+
+    if (inTownMenu) {
+        if (e.key === '1') buyStat('str');
+        if (e.key === '2') buyStat('con');
+        if (e.key === '3') buyStat('dex');
+        if (e.key === '4') buyStat('int');
+        if (e.key === 'h' || e.key === 'H') buyHealing();
+        if (e.key === 'Escape' || e.key === 'Enter' || e.key === 'u' || e.key === 'U') toggleTownMenu();
+        return;
+    }
 
     let actionTaken = false;
     let dx = 0, dy = 0;
 
     if (e.key === 'r' || e.key === 'R') {
         if (playerState.hp === playerState.maxHp && playerState.mp === playerState.maxMp) {
-            appendLog("Already at full resources.");
+            appendLog("Already at full structural health.");
         } else {
-            appendLog("Setting down camp to recover...");
+            appendLog("Setting down field camp...");
             isResting = true;
-            restInterval = setInterval(handleRestTick, 200);
+            restInterval = setInterval(handleRestTick, 180);
         }
         return;
     }
     else if (e.key === 'rest' || e.key === ' ') {
         actionTaken = true;
-        appendLog("You waitingly stand ground.");
+        appendLog("You stand your ground and pass the turn.");
     }
     else if (e.key === 'f' || e.key === 'F') {
         if (playerState.mp >= 3) {
             playerState.mp -= 3;
-            appendLog("Unleashed an outward Mana Blast energy shockwave!", "log-success");
+            
+            // Magic Spell calculations scaling with Intelligence
+            let magicDmg = 7 + Math.floor(playerState.stats.int / 2);
+            appendLog(`🔮 Mana Blast shockwave deals ${magicDmg} magic damage to adjacent cells!`, "log-success");
+            
             enemies.forEach(en => {
                 if (Math.abs(en.x - playerPos.x) <= 1 && Math.abs(en.y - playerPos.y) <= 1) {
-                    en.hp -= 6;
-                    spawnText(en.x, en.y, "-6 Magic", "#38bdf8");
+                    en.hp -= magicDmg;
+                    spawnText(en.x, en.y, `-${magicDmg} Magic`, "#38bdf8");
                 }
             });
             enemies = enemies.filter(en => {
-                if (en.hp <= 0) { playerState.xp += 5; appendLog(`Defeated ${en.name}!`); return false; }
+                if (en.hp <= 0) { 
+                    playerState.xp += 5; playerState.gold += 20;
+                    appendLog(`Vanquished ${en.name}! Clear loot drop: +20 Gold.`); 
+                    checkLevelUp();
+                    return false; 
+                }
                 return true;
             });
             actionTaken = true;
@@ -474,12 +569,14 @@ window.addEventListener('keydown', (e) => {
     else if (e.key === 'stairs' || e.key === 'Enter') {
         if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
             playerState.dungeonFloor++;
-            appendLog(`Descended deeper into the crypts. Welcome to Floor ${playerState.dungeonFloor}!`, "log-success");
+            appendLog(`Descended deeper. Welcome to Floor ${playerState.dungeonFloor}! Monsters are stronger down here.`, "log-success");
             generateProceduralDungeon();
             return;
-        } else {
-            appendLog("There are no stairs beneath your current position.");
-        }
+        } else { appendLog("No stairs detected beneath your feet."); }
+    }
+    else if (e.key === 'u' || e.key === 'U') {
+        toggleTownMenu();
+        return;
     }
     else {
         if (e.key === 'ArrowUp' || e.key === 'w') dy = -1;
@@ -493,15 +590,17 @@ window.addEventListener('keydown', (e) => {
             let enemyTarget = enemies.find(en => en.x === tx && en.y === ty);
 
             if (enemyTarget) {
+                // Physical Attack scaling with Strength
                 let weaponDmg = 5 + Math.floor(playerState.stats.str / 3);
                 enemyTarget.hp -= weaponDmg;
-                appendLog(`You hit the ${enemyTarget.name} for ${weaponDmg} damage.`);
+                appendLog(`⚔️ Cleaved the ${enemyTarget.name} for ${weaponDmg} damage.`);
                 spawnText(enemyTarget.x, enemyTarget.y, `-${weaponDmg}`, '#ffffff');
 
                 if (enemyTarget.hp <= 0) {
                     enemies = enemies.filter(en => en !== enemyTarget);
-                    playerState.xp += 5;
-                    appendLog("Target vanquished!", "log-success");
+                    playerState.xp += 5; playerState.gold += 20;
+                    appendLog(`Target destroyed! Loot acquired: +20 Gold blocks.`, "log-success");
+                    checkLevelUp();
                 }
                 actionTaken = true;
             } else if (destTile === TILE.FLOOR || destTile === TILE.STAIRS_DOWN) {
@@ -514,62 +613,80 @@ window.addEventListener('keydown', (e) => {
     if (actionTaken) processTurn();
 });
 
-// --- ADVANCED PROPORTIONAL VECTOR GRAPHIC GRAPHICS ---
+// --- CODE-DRIVEN ART & RENDER PIPELINE ---
 const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
 
 function renderEngine() {
-    // Clear whole frame completely to prevent camera bleeding ghosting lines
     ctx.fillStyle = "#020617"; ctx.fillRect(0, 0, cvs.width, cvs.height);
 
-    for (let y = camY; y < camY + VIEW_HEIGHT; y++) {
-        for (let x = camX; x < camX + VIEW_WIDTH; x++) {
-            let sX = (x - camX) * GAME_TILE; let sY = (y - camY) * GAME_TILE;
+    if (inTownMenu) {
+        // Hub Overlay Canvas Matrix Graphics
+        ctx.fillStyle = "#1e293b"; ctx.fillRect(30, 20, cvs.width - 60, cvs.height - 40);
+        ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2; ctx.strokeRect(30, 20, cvs.width - 60, cvs.height - 40);
 
-            if (gameMap[y] && gameMap[y][x] === TILE.FLOOR) {
-                // Fixed: Now covers 32x32 size correctly to seal floor seams cleanly
-                ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 32, 32);
-                ctx.fillStyle = "#334155"; ctx.fillRect(sX + 2, sY + 2, 4, 4); 
-            } 
-            else if (gameMap[y] && gameMap[y][x] === TILE.STAIRS_DOWN) {
-                ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 32, 32);
-                
-                let gradient = ctx.createRadialGradient(sX+16, sY+16, 2, sX+16, sY+16, 12);
-                gradient.addColorStop(0, '#38bdf8'); gradient.addColorStop(1, '#0369a1');
-                ctx.fillStyle = gradient;
-                
-                ctx.fillRect(sX + 6, sY + 6, 20, 4);
-                ctx.fillRect(sX + 9, sY + 12, 14, 4);
-                ctx.fillRect(sX + 12, sY + 18, 8, 4);
-            } 
-            else {
-                ctx.fillStyle = "#0f172a"; ctx.fillRect(sX, sY, 32, 32);
-                ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 1; ctx.strokeRect(sX, sY, 32, 32);
+        ctx.fillStyle = "#38bdf8"; ctx.font = "bold 16px 'Segoe UI'";
+        ctx.fillText("🌟 THE TOWN CITADEL SHOP 🌟", 50, 55);
+        
+        ctx.fillStyle = "#94a3b8"; ctx.font = "12px 'Segoe UI'";
+        ctx.fillText("Press keys [1-4] to upgrade stats or [H] to heal up entirely:", 50, 85);
+
+        ctx.fillStyle = "#ffffff"; ctx.font = "13px monospace";
+        ctx.fillText(`[1] Train STR (+ Melee Dmg)     | Cost: 50g | Current: ${playerState.stats.str}`, 55, 125);
+        ctx.fillText(`[2] Train CON (+ MaxHP & Def)   | Cost: 50g | Current: ${playerState.stats.con}`, 55, 160);
+        ctx.fillText(`[3] Train DEX (+ Dodge Evasion) | Cost: 50g | Current: ${playerState.stats.dex}`, 55, 195);
+        ctx.fillText(`[4] Train INT (+ Spell Damage)  | Cost: 50g | Current: ${playerState.stats.int}`, 55, 230);
+        
+        ctx.fillStyle = "#10b981";
+        ctx.fillText(`[H] Sanctuary Priest Restoration| Cost: 20g | Full HP & MP`, 55, 280);
+        
+        ctx.fillStyle = "#94a3b8"; ctx.font = "italic 11px 'Segoe UI'";
+        ctx.fillText("Press 'U', 'ENTER', or 'ESC' to dive back into the dungeon layout.", 50, 335);
+    } else {
+        // Traditional Dungeon Pipeline Rendering
+        for (let y = camY; y < camY + VIEW_HEIGHT; y++) {
+            for (let x = camX; x < camX + VIEW_WIDTH; x++) {
+                let sX = (x - camX) * GAME_TILE; let sY = (y - camY) * GAME_TILE;
+
+                if (gameMap[y] && gameMap[y][x] === TILE.FLOOR) {
+                    ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 32, 32);
+                    ctx.fillStyle = "#334155"; ctx.fillRect(sX + 2, sY + 2, 4, 4); 
+                } 
+                else if (gameMap[y] && gameMap[y][x] === TILE.STAIRS_DOWN) {
+                    ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 32, 32);
+                    let gradient = ctx.createRadialGradient(sX+16, sY+16, 2, sX+16, sY+16, 12);
+                    gradient.addColorStop(0, '#38bdf8'); gradient.addColorStop(1, '#0369a1');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(sX + 6, sY + 6, 20, 4);
+                    ctx.fillRect(sX + 9, sY + 12, 14, 4);
+                    ctx.fillRect(sX + 12, sY + 18, 8, 4);
+                } 
+                else {
+                    ctx.fillStyle = "#0f172a"; ctx.fillRect(sX, sY, 32, 32);
+                    ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 1; ctx.strokeRect(sX, sY, 32, 32);
+                }
             }
+        }
+
+        enemies.forEach(en => {
+            let sX = (en.x - camX) * GAME_TILE; let sY = (en.y - camY) * GAME_TILE;
+            ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(sX+16, sY+22, 8, 0, Math.PI*2); ctx.fill();
+            let rad = ctx.createRadialGradient(sX+16, sY+14, 2, sX+16, sY+14, 10);
+            rad.addColorStop(0, '#f43f5e'); rad.addColorStop(1, '#9f1239');
+            ctx.fillStyle = rad; ctx.beginPath(); ctx.arc(sX+16, sY+14, 9, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#ffe4e6"; ctx.fillRect(sX+13, sY+11, 2, 2); ctx.fillRect(sX+17, sY+11, 2, 2);
+        });
+
+        if (playerState.hp > 0) {
+            let pX = (playerPos.x - camX) * GAME_TILE; let pY = (playerPos.y - camY) * GAME_TILE;
+            ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.arc(pX+16, pY+24, 10, 0, Math.PI*2); ctx.fill();
+            let pGrad = ctx.createRadialGradient(pX+16, pY+14, 3, pX+16, pY+14, 12);
+            pGrad.addColorStop(0, '#38bdf8'); pGrad.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = pGrad; ctx.beginPath(); ctx.arc(pX+16, pY+14, 11, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(pX+16, pY+11, 3, 0, Math.PI*2); ctx.fill();
         }
     }
 
-    enemies.forEach(en => {
-        let sX = (en.x - camX) * GAME_TILE; let sY = (en.y - camY) * GAME_TILE;
-        ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(sX+16, sY+22, 8, 0, Math.PI*2); ctx.fill();
-        
-        let rad = ctx.createRadialGradient(sX+16, sY+14, 2, sX+16, sY+14, 10);
-        rad.addColorStop(0, '#f43f5e'); rad.addColorStop(1, '#9f1239');
-        ctx.fillStyle = rad; ctx.beginPath(); ctx.arc(sX+16, sY+14, 9, 0, Math.PI*2); ctx.fill();
-        
-        ctx.fillStyle = "#ffe4e6"; ctx.fillRect(sX+13, sY+11, 2, 2); ctx.fillRect(sX+17, sY+11, 2, 2);
-    });
-
-    if (playerState.hp > 0) {
-        let pX = (playerPos.x - camX) * GAME_TILE; let pY = (playerPos.y - camY) * GAME_TILE;
-        ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.arc(pX+16, pY+24, 10, 0, Math.PI*2); ctx.fill();
-
-        let pGrad = ctx.createRadialGradient(pX+16, pY+14, 3, pX+16, pY+14, 12);
-        pGrad.addColorStop(0, '#38bdf8'); pGrad.addColorStop(1, '#1d4ed8');
-        ctx.fillStyle = pGrad; ctx.beginPath(); ctx.arc(pX+16, pY+14, 11, 0, Math.PI*2); ctx.fill();
-
-        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(pX+16, pY+11, 3, 0, Math.PI*2); ctx.fill();
-    }
-
+    // Drifting text update matrices
     for (let i = floatTexts.length - 1; i >= 0; i--) {
         let ft = floatTexts[i];
         let sX = (ft.x - camX) * GAME_TILE; let sY = (ft.y - camY) * GAME_TILE;
@@ -585,7 +702,6 @@ function renderEngine() {
     requestAnimationFrame(renderEngine);
 }
 
-// Fixed Lifecycle Hook: Initiates setup safely only after the elements load inside document memory space
 window.onload = function() {
     generateProceduralDungeon();
     requestAnimationFrame(renderEngine);
