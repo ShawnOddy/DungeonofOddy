@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Inventory & Equipment</title>
+    <title>Dungeon Engine - Progression & Line of Sight</title>
     <style>
         body {
             background-color: #1e1e2f; color: #c8c8d0;
             font-family: 'Courier New', Courier, monospace;
             display: flex; flex-direction: column; align-items: center;
-            padding: 20px; margin: 0;
+            padding: 20px; margin: 0; user-select: none;
         }
-        h1 { color: #ffffff; }
+        h1 { color: #ffffff; margin-bottom: 10px; }
         .container {
             display: flex; gap: 20px; flex-wrap: wrap;
             justify-content: center; align-items: flex-start;
@@ -19,7 +19,7 @@
         .panel {
             background-color: #2a2a3b; padding: 15px;
             border-radius: 8px; border: 2px solid #3b3b4f;
-            position: relative; /* Needed for inventory overlay */
+            position: relative;
         }
         .stats-panel {
             width: 300px; background-color: #1a1a24; border-color: #10b981;
@@ -33,6 +33,7 @@
         .bonus { color: #10b981; font-weight: bold; }
         .danger { color: #ef4444 !important; }
         .magic { color: #60a5fa !important; }
+        .xp-color { color: #a855f7 !important; }
         .attr-box {
             background-color: #1e1e2f; padding: 8px; border-radius: 4px;
             margin-top: 10px; border: 1px solid #3b3b4f; font-size: 0.85em;
@@ -53,13 +54,19 @@
         #log { margin-top: 20px; color: #10b981; font-weight: bold; min-height: 1.5em; }
         .instructions { margin-top: 10px; font-size: 0.85em; color: #9ca3af; text-align: center; }
 
-        /* Inventory UI Overlay */
-        #inv-modal {
+        /* Modal Overlays (Inventory & Level Up) */
+        .modal {
             position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
-            background-color: rgba(26, 26, 36, 0.95); border: 2px solid #3b82f6;
-            border-radius: 8px; padding: 20px; display: none; overflow-y: auto; z-index: 100;
+            background-color: rgba(26, 26, 36, 0.96); border-radius: 8px; 
+            padding: 20px; display: none; overflow-y: auto; z-index: 100;
         }
-        #inv-modal h2 { margin-top: 0; color: #3b82f6; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
+        #inv-modal { border: 2px solid #3b82f6; }
+        #lvl-modal { border: 2px solid #a855f7; text-align: center; }
+        
+        .modal h2 { margin-top: 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
+        #inv-modal h2 { color: #3b82f6; }
+        #lvl-modal h2 { color: #a855f7; }
+
         .inv-row {
             display: flex; justify-content: space-between; background: #1e1e2f;
             padding: 10px; border-radius: 4px; border: 1px solid #3b3b4f;
@@ -68,9 +75,19 @@
         .inv-info strong { color: #fbbf24; }
         .inv-info span { font-size: 0.85em; color: #9ca3af; display: block; margin-top: 4px; }
         .inv-actions button { padding: 4px 8px; font-size: 0.85em; margin-left: 5px; }
+        
         .btn-use { background-color: #10b981; } .btn-use:hover { background-color: #059669; }
         .btn-drop { background-color: #ef4444; } .btn-drop:hover { background-color: #dc2626; }
         .btn-unequip { background-color: #f59e0b; } .btn-unequip:hover { background-color: #d97706; }
+        
+        .lvl-row {
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 300px; margin: 15px auto; background: #1e1e2f;
+            padding: 10px 20px; border-radius: 6px; border: 1px solid #3b3b4f;
+        }
+        .lvl-row span { font-weight: bold; font-size: 1.1em; }
+        .btn-plus { background-color: #a855f7; padding: 6px 14px; font-size: 1.1em; }
+        .btn-plus:hover { background-color: #9333ea; }
     </style>
 </head>
 <body>
@@ -81,6 +98,8 @@
         <div class="panel stats-panel">
             <h3>Hero Status</h3>
             <div class="stat-row"><span>Floor:</span><span class="stat-value" id="ui-level">1</span></div>
+            <div class="stat-row"><span>Character Lvl:</span><span class="stat-value bonus" id="ui-plvl">1</span></div>
+            <div class="stat-row"><span>XP:</span><span class="stat-value xp-color" id="ui-xp">0 / 20</span></div>
             <div class="stat-row"><span>HP:</span><span class="stat-value" id="ui-hp">20 / 20</span></div>
             <div class="stat-row"><span>MP:</span><span class="stat-value magic" id="ui-mp">20 / 20</span></div>
             <div class="stat-row"><span>Gold:</span><span class="stat-value" id="ui-gold">0</span></div>
@@ -94,24 +113,34 @@
             </div>
             
             <h3 style="margin-top: 15px;">Bag Space (<span id="ui-bag-count">0</span> / <span id="ui-bag-max">0</span>)</h3>
-            <div style="font-size: 0.85em; color: #9ca3af; text-align: center;">Press 'I' to manage items</div>
+            <div style="font-size: 0.85em; color: #9ca3af; text-align: center;">Press 'I' to manage items<br>Press 'G' to grab floor loot</div>
         </div>
 
         <div class="panel">
             <canvas id="gameCanvas" width="576" height="576"></canvas>
             
-            <div id="inv-modal">
+            <div id="inv-modal" class="modal">
                 <h2>Equipped</h2>
                 <div id="inv-equipped-list"></div>
-                
                 <h2 style="margin-top: 20px;">Backpack</h2>
                 <div id="inv-bag-list"></div>
-                
                 <p style="text-align: center; margin-top: 20px;"><button onclick="toggleInventory()">Close (I)</button></p>
             </div>
 
+            <div id="lvl-modal" class="modal">
+                <h2>🎉 LEVEL UP! 🎉</h2>
+                <p>You grew stronger! Distribute your stat points:</p>
+                <h3 style="color: #fbbf24;">Points Remaining: <span id="ui-lvl-points">0</span></h3>
+                
+                <div class="lvl-row"><span>Strength (STR)</span><button class="btn-plus" onclick="allocateStat('str')">+</button></div>
+                <div class="lvl-row"><span>Dexterity (DEX)</span><button class="btn-plus" onclick="allocateStat('dex')">+</button></div>
+                <div class="lvl-row"><span>Constitution (CON)</span><button class="btn-plus" onclick="allocateStat('con')">+</button></div>
+                <div class="lvl-row"><span>Intelligence (INT)</span><button class="btn-plus" onclick="allocateStat('int')">+</button></div>
+                <div class="lvl-row"><span>Wisdom (WIS)</span><button class="btn-plus" onclick="allocateStat('wis')">+</button></div>
+            </div>
+
             <div id="log">Welcome to the dungeon...</div>
-            <div class="instructions">Arrows/WASD Move | Enter for Stairs | 'I' for Inventory<br>'H' to Heal (5 MP) | 'F' for Arcane Blast (3 MP)</div>
+            <div class="instructions">WASD/Arrows Move | G to Grab | Enter for Stairs | I for Inventory<br>H to Heal (5 MP) | F for Arcane Blast (3 MP)</div>
         </div>
 
         <div class="panel">
@@ -126,6 +155,7 @@
                 <button onclick="setTarget('HERO', this)">Hero</button>
                 <button onclick="setTarget('GOBLIN', this)">Goblin</button>
                 <button onclick="setTarget('BAT', this)">Bat</button>
+                <button onclick="setTarget('LOOT_BAG', this)">Loot Bag</button>
             </div>
         </div>
     </div>
@@ -145,10 +175,9 @@ let SPRITE_MAP = {
     STAIRS_UP: { col: 2, row: 0 }, STAIRS_DOWN: { col: 3, row: 0 },
     CHEST_CLOSED: { col: 3, row: 1 }, CHEST_OPEN: { col: 0, row: 2 }, 
     HERO: { col: 1, row: 2 }, GOBLIN: { col: 2, row: 2 }, BAT: { col: 3, row: 2 },
-    TRAP: { col: 0, row: 3 }
+    TRAP: { col: 0, row: 3 }, LOOT_BAG: { col: 1, row: 3 }
 };
 
-// Item Database defining properties and effects
 const ITEM_DB = {
     "Health Potion": { type: "consumable", desc: "Restores 20 HP", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
     "Mana Potion": { type: "consumable", desc: "Restores 10 MP", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 10); } },
@@ -156,28 +185,34 @@ const ITEM_DB = {
     "Steel Sword": { type: "weapon", bonusDmg: 5, desc: "+5 Damage" },
     "Leather Armor": { type: "armor", bonusDef: 2, desc: "+2 Defense" },
     "Chainmail": { type: "armor", bonusDef: 5, desc: "+5 Defense" },
-    "Tome of Knowledge": { type: "consumable", desc: "+1 INT & Restores MP", use: (p) => { p.stats.int++; p.maxMp = p.stats.int * 2; p.mp = p.maxMp; } }
+    "Tome of Knowledge": { type: "consumable", desc: "+1 INT & Restores MP", use: (p) => { p.stats.int++; recalculateSecondaryStats(); } }
 };
 const LOOT_TABLE = Object.keys(ITEM_DB);
 
 // --- 2. STATE VARIABLES ---
-let gameState = "PLAYING"; // "PLAYING" or "INVENTORY"
+let gameState = "PLAYING"; // "PLAYING", "INVENTORY", "LEVEL_UP"
 
 let playerState = {
     stats: { str: 12, dex: 10, con: 14, int: 16, wis: 15 },
     hp: 0, maxHp: 0, mp: 0, maxMp: 0,
-    gold: 0, level: 1,
-    inventory: [], // Array of item name strings
+    gold: 0, dungeonFloor: 1, charLevel: 1,
+    xp: 0, maxXp: 20, unspentPoints: 0,
+    inventory: [], 
     equipment: { weapon: null, armor: null }
 };
 
-playerState.maxHp = playerState.stats.con * 2;
+function recalculateSecondaryStats() {
+    playerState.maxHp = playerState.stats.con * 2;
+    playerState.maxMp = playerState.stats.int * 2;
+    playerState.maxXp = playerState.charLevel * 20;
+}
+recalculateSecondaryStats();
 playerState.hp = playerState.maxHp;
-playerState.maxMp = playerState.stats.int * 2;
 playerState.mp = playerState.maxMp;
 
 let gameMap = [];
 let enemies = [];      
+let groundItems = []; // Contains dropped items: {x, y, name, amount, isGold}
 let floatTexts = [];   
 let playerPos = { x: 2, y: 2 }; 
 
@@ -201,6 +236,7 @@ function generateInternalSpriteSheet() {
     drawTile(ctx, 2, 2, c => { c.fillStyle = '#16a34a'; c.fillRect(8, 12, 16, 16); c.fillStyle = '#ef4444'; c.fillRect(10, 14, 4, 4); c.fillRect(18, 14, 4, 4); c.fillStyle = '#78350f'; c.fillRect(4, 10, 4, 16); });
     drawTile(ctx, 3, 2, c => { c.fillStyle = '#581c87'; c.fillRect(12, 12, 8, 8); c.fillStyle = '#000000'; c.beginPath(); c.moveTo(12,14); c.lineTo(2,8); c.lineTo(6,18); c.fill(); c.beginPath(); c.moveTo(20,14); c.lineTo(30,8); c.lineTo(26,18); c.fill(); c.fillStyle = '#ef4444'; c.fillRect(14, 14, 2, 2); c.fillRect(18, 14, 2, 2); });
     drawTile(ctx, 0, 3, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#111827'; c.fillRect(8, 8, 16, 16); c.fillStyle = '#9ca3af'; c.beginPath(); c.moveTo(16,4); c.lineTo(12,12); c.lineTo(20,12); c.fill(); c.beginPath(); c.moveTo(16,28); c.lineTo(12,20); c.lineTo(20,20); c.fill(); });
+    drawTile(ctx, 1, 3, c => { c.fillStyle = '#d97706'; c.beginPath(); c.arc(16, 20, 8, 0, Math.PI * 2); c.fill(); c.fillStyle = '#f59e0b'; c.fillRect(14, 8, 4, 6); });
     spriteSheet.src = tempCanvas.toDataURL("image/png");
 }
 
@@ -210,7 +246,7 @@ spriteSheet.onload = () => {
 };
 generateInternalSpriteSheet();
 
-// --- 4. UI & INVENTORY UPDATER ---
+// --- 4. ENGINE SYSTEMS (UI, INVENTORY, LEVEL UP) ---
 function getEquipBonus(statType) {
     let wep = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
     let arm = playerState.equipment.armor ? ITEM_DB[playerState.equipment.armor] : null;
@@ -220,156 +256,184 @@ function getEquipBonus(statType) {
 }
 
 function updateUI() {
-    document.getElementById('ui-level').innerText = playerState.level;
+    document.getElementById('ui-level').innerText = playerState.dungeonFloor;
+    document.getElementById('ui-plvl').innerText = playerState.charLevel;
+    document.getElementById('ui-xp').innerText = `${playerState.xp} / ${playerState.maxXp}`;
+    
     let hpElement = document.getElementById('ui-hp');
     hpElement.innerText = `${playerState.hp} / ${playerState.maxHp}`;
     if (playerState.hp <= playerState.maxHp * 0.25) hpElement.classList.add('danger');
     else hpElement.classList.remove('danger');
+    
     document.getElementById('ui-mp').innerText = `${playerState.mp} / ${playerState.maxMp}`;
     document.getElementById('ui-gold').innerText = playerState.gold;
 
-    let wepBonus = getEquipBonus('dmg');
-    let armBonus = getEquipBonus('def');
-
+    let wepBonus = getEquipBonus('dmg'); let armBonus = getEquipBonus('def');
     let baseDmg = 1 + Math.floor(playerState.stats.str / 4);
-    let totalDmg = baseDmg + wepBonus;
     let baseDef = Math.floor(playerState.stats.con / 5);
-    let totalDef = baseDef + armBonus;
-    let crit = playerState.stats.dex; 
-    let mdmg = 2 + Math.floor(playerState.stats.int / 3);
-    let regen = Math.floor(playerState.stats.wis * 1.5);
 
-    let dmgStr = `Dmg:${totalDmg}` + (wepBonus > 0 ? ` <span class="bonus">(+${wepBonus})</span>` : "");
-    let defStr = `Def:${totalDef}` + (armBonus > 0 ? ` <span class="bonus">(+${armBonus})</span>` : "");
-
-    document.getElementById('ui-str').innerHTML = `${playerState.stats.str} <span class="attr-detail">(${dmgStr})</span>`;
-    document.getElementById('ui-dex').innerHTML = `${playerState.stats.dex} <span class="attr-detail">(Crit:${crit}%)</span>`;
-    document.getElementById('ui-con').innerHTML = `${playerState.stats.con} <span class="attr-detail">(${defStr})</span>`;
-    document.getElementById('ui-int').innerHTML = `${playerState.stats.int} <span class="attr-detail">(Mag Dmg:${mdmg})</span>`;
-    document.getElementById('ui-wis').innerHTML = `${playerState.stats.wis} <span class="attr-detail">(Regen:${regen}%)</span>`;
+    document.getElementById('ui-str').innerHTML = `${playerState.stats.str} <span class="attr-detail">(Dmg:${baseDmg+wepBonus}${wepBonus > 0 ? ` +${wepBonus}` : ""})</span>`;
+    document.getElementById('ui-dex').innerHTML = `${playerState.stats.dex} <span class="attr-detail">(Crit:${playerState.stats.dex}%)</span>`;
+    document.getElementById('ui-con').innerHTML = `${playerState.stats.con} <span class="attr-detail">(Def:${baseDef+armBonus}${armBonus > 0 ? ` +${armBonus}` : ""})</span>`;
+    document.getElementById('ui-int').innerHTML = `${playerState.stats.int} <span class="attr-detail">(Mag:${2+Math.floor(playerState.stats.int/3)})</span>`;
+    document.getElementById('ui-wis').innerHTML = `${playerState.stats.wis} <span class="attr-detail">(Regen:${Math.floor(playerState.stats.wis*1.5)}%)</span>`;
 
     document.getElementById('ui-bag-count').innerText = playerState.inventory.length;
     document.getElementById('ui-bag-max').innerText = playerState.stats.str;
+    
+    // Check floor items notice
+    let standItem = groundItems.find(i => i.x === playerPos.x && i.y === playerPos.y);
+    if (standItem && gameState === "PLAYING") {
+        document.getElementById('log').innerText = standItem.isGold 
+            ? `💰 You see ${standItem.amount} Gold on the floor. [G] to pickup.`
+            : `🎒 You see a ${standItem.name} on the floor. [G] to pickup.`;
+    }
+}
+
+// Bresenham's Raycasting Algorithm for Line of Sight Checks
+function hasLineOfSight(x1, y1, x2, y2) {
+    let dx = Math.abs(x2 - x1); let dy = Math.abs(y2 - y1);
+    let sx = (x1 < x2) ? 1 : -1; let sy = (y1 < y2) ? 1 : -1;
+    let err = dx - dy;
+    
+    while (true) {
+        if (x1 === x2 && y1 === y2) return true;
+        if (gameMap[y1] && gameMap[y1][x1] === TILE.WALL) return false;
+        let e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x1 += sx; }
+        if (e2 < dx) { err += dx; y1 += sy; }
+    }
 }
 
 function toggleInventory() {
     const modal = document.getElementById('inv-modal');
     if (gameState === "PLAYING") {
-        gameState = "INVENTORY";
-        renderInventoryList();
-        modal.style.display = 'block';
-    } else {
-        gameState = "PLAYING";
-        modal.style.display = 'none';
+        gameState = "INVENTORY"; renderInventoryList(); modal.style.display = 'block';
+    } else if (gameState === "INVENTORY") {
+        gameState = "PLAYING"; modal.style.display = 'none'; updateUI();
+    }
+}
+
+function checkLevelUp() {
+    if (playerState.xp >= playerState.maxXp) {
+        playerState.xp -= playerState.maxXp;
+        playerState.charLevel++;
+        playerState.unspentPoints += 3;
+        recalculateSecondaryStats();
+        
+        // Fully restore player on level up
+        playerState.hp = playerState.maxHp;
+        playerState.mp = playerState.maxMp;
+        
+        gameState = "LEVEL_UP";
+        document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
+        document.getElementById('lvl-modal').style.display = 'block';
+        spawnText(playerPos.x, playerPos.y, "LEVEL UP!", '#a855f7');
+    }
+}
+
+function allocateStat(statKey) {
+    if (playerState.unspentPoints > 0) {
+        playerState.stats[statKey]++;
+        playerState.unspentPoints--;
+        document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
+        recalculateSecondaryStats();
+        updateUI();
+        
+        if (playerState.unspentPoints <= 0) {
+            document.getElementById('lvl-modal').style.display = 'none';
+            gameState = "PLAYING";
+            document.getElementById('log').innerText = "💪 You feel your powers surge!";
+        }
     }
 }
 
 function renderInventoryList() {
-    const eqList = document.getElementById('inv-equipped-list');
-    const bgList = document.getElementById('inv-bag-list');
+    const eqList = document.getElementById('inv-equipped-list'); const bgList = document.getElementById('inv-bag-list');
     eqList.innerHTML = ''; bgList.innerHTML = '';
 
-    // Render Equipment
     ['weapon', 'armor'].forEach(slot => {
         let itemName = playerState.equipment[slot];
         if (itemName) {
-            let item = ITEM_DB[itemName];
             eqList.innerHTML += `
                 <div class="inv-row">
-                    <div class="inv-info"><strong>[${slot.toUpperCase()}] ${itemName}</strong><span>${item.desc}</span></div>
+                    <div class="inv-info"><strong>[${slot.toUpperCase()}] ${itemName}</strong><span>${ITEM_DB[itemName].desc}</span></div>
                     <div class="inv-actions"><button class="btn-unequip" onclick="unequipItem('${slot}')">Unequip</button></div>
                 </div>`;
-        } else {
-            eqList.innerHTML += `<div class="inv-row"><div class="inv-info" style="color:#6b7280;">[${slot.toUpperCase()}] Empty</div></div>`;
-        }
+        } else { eqList.innerHTML += `<div class="inv-row"><div class="inv-info" style="color:#6b7280;">[${slot.toUpperCase()}] Empty</div></div>`; }
     });
 
-    // Render Bag
     if (playerState.inventory.length === 0) {
         bgList.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Bag is empty.</div>';
     } else {
-        playerState.inventory.forEach((itemName, index) => {
+        playerState.inventory.forEach((itemName, idx) => {
             let item = ITEM_DB[itemName];
             let actionBtn = item.type === "consumable" 
-                ? `<button class="btn-use" onclick="useItem(${index})">Use</button>` 
-                : `<button class="btn-use" onclick="equipItem(${index})">Equip</button>`;
-            
+                ? `<button class="btn-use" onclick="useItem(${idx})">Use</button>` 
+                : `<button class="btn-use" onclick="equipItem(${idx})">Equip</button>`;
             bgList.innerHTML += `
                 <div class="inv-row">
                     <div class="inv-info"><strong>${itemName}</strong><span>${item.desc}</span></div>
-                    <div class="inv-actions">
-                        ${actionBtn}
-                        <button class="btn-drop" onclick="dropItem(${index})">Drop</button>
-                    </div>
+                    <div class="inv-actions">${actionBtn}<button class="btn-drop" onclick="dropItem(${idx})">Drop</button></div>
                 </div>`;
         });
     }
 }
 
-// Inventory Actions (These consume a turn)
-function useItem(index) {
-    let itemName = playerState.inventory[index];
-    ITEM_DB[itemName].use(playerState);
-    playerState.inventory.splice(index, 1);
-    document.getElementById('log').innerText = `🎒 Drank ${itemName}.`;
-    spawnText(playerPos.x, playerPos.y, `Used Item!`, '#10b981');
-    finishMenuAction();
+function useItem(idx) {
+    let name = playerState.inventory[idx]; ITEM_DB[name].use(playerState); playerState.inventory.splice(idx, 1);
+    document.getElementById('log').innerText = `🎒 Drank ${name}.`; finishMenuAction();
 }
-
-function equipItem(index) {
-    let itemName = playerState.inventory[index];
-    let item = ITEM_DB[itemName];
-    let currentEquip = playerState.equipment[item.type];
-    
-    playerState.equipment[item.type] = itemName;
-    playerState.inventory.splice(index, 1);
-    if (currentEquip) playerState.inventory.push(currentEquip); // Put old item in bag
-    
-    document.getElementById('log').innerText = `🎒 Equipped ${itemName}.`;
-    finishMenuAction();
+function equipItem(idx) {
+    let name = playerState.inventory[idx]; let type = ITEM_DB[name].type; let old = playerState.equipment[type];
+    playerState.equipment[type] = name; playerState.inventory.splice(idx, 1); if (old) playerState.inventory.push(old);
+    document.getElementById('log').innerText = `🎒 Equipped ${name}.`; finishMenuAction();
 }
-
 function unequipItem(slot) {
-    if (playerState.inventory.length >= playerState.stats.str) {
-        alert("Bag is full! Cannot unequip."); return;
-    }
-    let itemName = playerState.equipment[slot];
-    playerState.inventory.push(itemName);
-    playerState.equipment[slot] = null;
-    document.getElementById('log').innerText = `🎒 Unequipped ${itemName}.`;
-    finishMenuAction();
+    if (playerState.inventory.length >= playerState.stats.str) { alert("Bag is full!"); return; }
+    let name = playerState.equipment[slot]; playerState.inventory.push(name); playerState.equipment[slot] = null;
+    document.getElementById('log').innerText = `🎒 Unequipped ${name}.`; finishMenuAction();
 }
-
-function dropItem(index) {
-    let itemName = playerState.inventory[index];
-    playerState.inventory.splice(index, 1);
-    document.getElementById('log').innerText = `🎒 Dropped ${itemName}.`;
-    finishMenuAction();
+function dropItem(idx) {
+    let name = playerState.inventory[idx]; playerState.inventory.splice(idx, 1);
+    groundItems.push({ x: playerPos.x, y: playerPos.y, name: name, amount: 1, isGold: false });
+    document.getElementById('log').innerText = `🎒 Dropped ${name} onto the floor.`; finishMenuAction();
 }
-
-function finishMenuAction() {
-    updateUI();
-    toggleInventory(); // Close menu
-    processTurn();     // Let enemies move
-}
+function finishMenuAction() { toggleInventory(); processTurn(); }
 
 function spawnText(x, y, text, color) { floatTexts.push({ x: x, y: y, text: text, color: color, life: 40, offset: 0 }); }
 function isWalkable(x, y) {
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return false;
     let t = gameMap[y][x];
     if (t === TILE.WALL || t === TILE.CHEST_CLOSED) return false;
-    if (playerPos.x === x && playerPos.y === y) return false;
-    if (enemies.some(e => e.x === x && e.y === y)) return false;
+    if (playerPos.x === x && playerPos.y === y || enemies.some(e => e.x === x && e.y === y)) return false;
     return true;
 }
 
-// --- 5. TURN LOGIC (AI & Combat) ---
+// --- 5. ENEMY & COMBAT TURN RESOLUTION ---
 function processTurn() {
-    // Clear dead enemies
+    // Process Killed Enemies & Distribute XP/Ground Items
     enemies = enemies.filter(en => {
-        if (en.hp <= 0) { document.getElementById('log').innerText = `💀 Slayed the ${en.name}!`; return false; }
+        if (en.hp <= 0) { 
+            playerState.xp += en.xpValue;
+            spawnText(en.x, en.y, `+${en.xpValue} XP`, '#a855f7');
+            document.getElementById('log').innerText = `💀 Killed ${en.name}!`; 
+            
+            // Generate Random Loot Drop onto map coordinates
+            let roll = Math.random();
+            if (roll < 0.4) {
+                groundItems.push({ x: en.x, y: en.y, name: "Gold", amount: Math.floor(Math.random() * 10) + 5, isGold: true });
+            } else if (roll < 0.7) {
+                let randomItem = LOOT_TABLE[Math.floor(Math.random() * LOOT_TABLE.length)];
+                groundItems.push({ x: en.x, y: en.y, name: randomItem, amount: 1, isGold: false });
+            }
+            return false; 
+        }
         return true;
     });
+
+    checkLevelUp();
+    if (gameState !== "PLAYING") return;
 
     let playerDef = Math.floor(playerState.stats.con / 5) + getEquipBonus('def');
 
@@ -377,25 +441,28 @@ function processTurn() {
         let dx = playerPos.x - en.x; let dy = playerPos.y - en.y;
         let dist = Math.abs(dx) + Math.abs(dy);
 
-        if (dist === 1) { // Attack
+        if (dist === 1) { // Melee Range Attack
             let dmg = Math.max(0, en.atk - playerDef);
             playerState.hp -= dmg;
             spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
-        } else if (dist < 6) { // Hunt Player
-            let nx = en.x + Math.sign(dx); let ny = en.y + Math.sign(dy);
-            if (Math.abs(dx) > Math.abs(dy)) {
-                if (isWalkable(nx, en.y)) en.x = nx; else if (isWalkable(en.x, ny)) en.y = ny;
-            } else {
-                if (isWalkable(en.x, ny)) en.y = ny; else if (isWalkable(nx, en.y)) en.x = nx;
+        } else if (dist < 7) { 
+            // Raycast check: Does the enemy have a clean Line of Sight?
+            if (hasLineOfSight(en.x, en.y, playerPos.x, playerPos.y)) {
+                let nx = en.x + Math.sign(dx); let ny = en.y + Math.sign(dy);
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (isWalkable(nx, en.y)) en.x = nx; else if (isWalkable(en.x, ny)) en.y = ny;
+                } else {
+                    if (isWalkable(en.x, ny)) en.y = ny; else if (isWalkable(nx, en.y)) en.x = nx;
+                }
             }
         }
     });
 
     if (playerState.hp <= 0) {
-        playerState.hp = 0;
-        document.getElementById('log').innerText = `💀 YOU HAVE PERISHED! GAME OVER.`;
+        playerState.hp = 0; document.getElementById('log').innerText = `💀 GAME OVER. YOU DIED.`;
     }
 
+    // Passives
     if (playerState.hp > 0 && Math.random() < (playerState.stats.wis * 0.015)) {
         if (playerState.hp < playerState.maxHp) playerState.hp++;
         if (playerState.mp < playerState.maxMp) playerState.mp++;
@@ -403,46 +470,56 @@ function processTurn() {
     updateUI();
 }
 
-// --- 6. PLAYER INPUT ---
+// --- 6. KEYBOARD CONTROLS ---
 window.addEventListener('keydown', (e) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F', 'i', 'I'].includes(e.key)) e.preventDefault();
-    if (playerState.hp <= 0) return; 
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F', 'i', 'I', 'g', 'G'].includes(e.key)) e.preventDefault();
+    if (playerState.hp <= 0 || gameState === "LEVEL_UP") return; 
 
-    // Inventory Toggle
     if (e.key === 'i' || e.key === 'I') { toggleInventory(); return; }
-    
-    // Block all other inputs if inventory is open
     if (gameState === "INVENTORY") return;
 
     let tookAction = false;
 
-    if (e.key === 'h' || e.key === 'H') {
+    // Grab Item from Floor
+    if (e.key === 'g' || e.key === 'G') {
+        let idx = groundItems.findIndex(i => i.x === playerPos.x && i.y === playerPos.y);
+        if (idx !== -1) {
+            let item = groundItems[idx];
+            if (item.isGold) {
+                playerState.gold += item.amount;
+                document.getElementById('log').innerText = `💰 Picked up ${item.amount} Gold!`;
+                groundItems.splice(idx, 1); tookAction = true;
+            } else {
+                if (playerState.inventory.length >= playerState.stats.str) {
+                    document.getElementById('log').innerText = `🎒 Overburdened! Inventory full.`;
+                } else {
+                    playerState.inventory.push(item.name);
+                    document.getElementById('log').innerText = `🎒 Picked up ${item.name}.`;
+                    groundItems.splice(idx, 1); tookAction = true;
+                }
+            }
+        } else { document.getElementById('log').innerText = "There is nothing here to pick up."; }
+    }
+    else if (e.key === 'h' || e.key === 'H') {
         if (playerState.mp >= 5) {
-            let healAmount = Math.floor(playerState.stats.wis / 1.5) + 2; 
-            playerState.mp -= 5;
-            playerState.hp = Math.min(playerState.maxHp, playerState.hp + healAmount);
-            spawnText(playerPos.x, playerPos.y, `+${healAmount}`, '#10b981');
-            document.getElementById('log').innerText = `✨ Cast Heal!`;
-            tookAction = true;
+            let heal = Math.floor(playerState.stats.wis / 1.5) + 2; playerState.mp -= 5;
+            playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
+            spawnText(playerPos.x, playerPos.y, `+${heal}`, '#10b981'); tookAction = true;
         }
     }
     else if (e.key === 'f' || e.key === 'F') {
         if (playerState.mp >= 3) {
-            playerState.mp -= 3;
-            let mdmg = 2 + Math.floor(playerState.stats.int / 3);
-            let hitCount = 0;
+            playerState.mp -= 3; let mdmg = 2 + Math.floor(playerState.stats.int / 3); let hit = 0;
             enemies.forEach(en => {
-                let dist = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
-                if (dist === 1) { en.hp -= mdmg; spawnText(en.x, en.y, `-${mdmg}`, '#60a5fa'); hitCount++; }
+                if (Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y) === 1) { en.hp -= mdmg; spawnText(en.x, en.y, `-${mdmg}`, '#60a5fa'); hit++; }
             });
-            document.getElementById('log').innerText = hitCount > 0 ? `🔥 Arcane Blast hit ${hitCount} enemy(s)!` : `🔥 Arcane Blast fizzled...`;
             tookAction = true;
         }
     }
     else if (e.key === 'Enter') {
         if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
-            playerState.level++; generateMap(); 
-            document.getElementById('log').innerText = `You descend to Floor ${playerState.level}...`;
+            playerState.dungeonFloor++; generateMap(); 
+            document.getElementById('log').innerText = `Descending deep into floor ${playerState.dungeonFloor}...`;
             tookAction = true;
         }
     }
@@ -457,31 +534,26 @@ window.addEventListener('keydown', (e) => {
             let targetTile = gameMap[targetY] ? gameMap[targetY][targetX] : null;
             let targetEnemy = enemies.find(en => en.x === targetX && en.y === targetY);
             
-            if (targetEnemy) { // Melee Combat
-                let baseDmg = 1 + Math.floor(playerState.stats.str / 4) + getEquipBonus('dmg');
+            if (targetEnemy) {
+                let dmg = 1 + Math.floor(playerState.stats.str / 4) + getEquipBonus('dmg');
                 let isCrit = (Math.random() * 100) < playerState.stats.dex;
-                let dealtDmg = isCrit ? baseDmg * 2 : baseDmg;
-                targetEnemy.hp -= dealtDmg;
-                spawnText(targetEnemy.x, targetEnemy.y, `-${dealtDmg}`, isCrit ? '#fbbf24' : '#ffffff');
-                document.getElementById('log').innerText = `⚔️ ${isCrit ? "CRIT! " : ""}Hit ${targetEnemy.name} for ${dealtDmg}.`;
+                if (isCrit) dmg *= 2;
+                targetEnemy.hp -= dmg;
+                spawnText(targetEnemy.x, targetEnemy.y, `-${dmg}`, isCrit ? '#fbbf24' : '#ffffff');
+                document.getElementById('log').innerText = `⚔️ Hit ${targetEnemy.name} for ${dmg}.`;
             } else if (targetTile !== null && targetTile !== TILE.WALL) {
                 if (targetTile === TILE.CHEST_CLOSED) {
                     if (playerState.inventory.length >= playerState.stats.str) {
-                        document.getElementById('log').innerText = `🎒 Overburdened! Bag is full.`; tookAction = false; 
+                        document.getElementById('log').innerText = `🎒 Bag full! Increase your STR.`; tookAction = false; 
                     } else {
                         gameMap[targetY][targetX] = TILE.CHEST_OPEN;
-                        let foundItem = LOOT_TABLE[Math.floor(Math.random() * LOOT_TABLE.length)];
-                        playerState.inventory.push(foundItem);
-                        document.getElementById('log').innerText = `🏆 Looted ${foundItem}!`;
+                        let found = LOOT_TABLE[Math.floor(Math.random() * LOOT_TABLE.length)];
+                        playerState.inventory.push(found); document.getElementById('log').innerText = `🏆 Opened chest: ${found}!`;
                     }
                 } else if (targetTile === TILE.TRAP) {
-                    let trapDmg = 4; playerState.hp -= trapDmg; gameMap[targetY][targetX] = TILE.FLOOR; 
-                    playerPos.x = targetX; playerPos.y = targetY;
-                    spawnText(playerPos.x, playerPos.y, `-${trapDmg}`, '#ef4444');
-                    document.getElementById('log').innerText = `💥 Stepped on a hidden trap!`;
-                } else {
-                    playerPos.x = targetX; playerPos.y = targetY; // Standard Move
-                }
+                    playerState.hp -= 4; gameMap[targetY][targetX] = TILE.FLOOR; playerPos.x = targetX; playerPos.y = targetY;
+                    spawnText(playerPos.x, playerPos.y, `-4`, '#ef4444');
+                } else { playerPos.x = targetX; playerPos.y = targetY; }
             } else { tookAction = false; }
         }
     }
@@ -491,7 +563,7 @@ window.addEventListener('keydown', (e) => {
 
 // --- 7. PROCEDURAL MAP GENERATION ---
 function generateMap() {
-    gameMap = []; enemies = [];
+    gameMap = []; enemies = []; groundItems = [];
     for (let y = 0; y < MAP_HEIGHT; y++) {
         let row = []; for (let x = 0; x < MAP_WIDTH; x++) row.push(TILE.WALL);
         gameMap.push(row);
@@ -517,16 +589,18 @@ function generateMap() {
 
     for(let i=1; i<rooms.length; i++) {
         let r = rooms[i];
-        if (Math.random() > 0.3) gameMap[r.y + 1][r.x + 1] = TILE.CHEST_CLOSED;
-        if (Math.random() > 0.5) gameMap[r.y + 2][r.cx] = TILE.TRAP;
+        if (Math.random() > 0.4) gameMap[r.y + 1][r.x + 1] = TILE.CHEST_CLOSED;
+        if (Math.random() > 0.6) gameMap[r.y + 2][r.cx] = TILE.TRAP;
         if (Math.random() > 0.2) {
             let typeStr = Math.random() > 0.5 ? 'GOBLIN' : 'BAT';
             let ex = r.x + Math.floor(Math.random() * (r.w-1)); let ey = r.y + Math.floor(Math.random() * (r.h-1));
             if (gameMap[ey][ex] === TILE.FLOOR) {
                 enemies.push({
                     x: ex, y: ey, type: typeStr, name: typeStr === 'GOBLIN' ? 'Goblin' : 'Bat',
-                    hp: typeStr === 'GOBLIN' ? 12 + playerState.level : 6 + playerState.level,
-                    atk: typeStr === 'GOBLIN' ? 3 + Math.floor(playerState.level/2) : 2 + Math.floor(playerState.level/2)
+                    hp: typeStr === 'GOBLIN' ? 10 + playerState.dungeonFloor * 3 : 5 + playerState.dungeonFloor * 2,
+                    maxHp: typeStr === 'GOBLIN' ? 10 + playerState.dungeonFloor * 3 : 5 + playerState.dungeonFloor * 2,
+                    atk: typeStr === 'GOBLIN' ? 3 + playerState.dungeonFloor : 2 + playerState.dungeonFloor,
+                    xpValue: typeStr === 'GOBLIN' ? 10 : 5
                 });
             }
         }
@@ -542,6 +616,7 @@ function drawSprite(key, gridX, gridY) {
 function gameLoop() {
     gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 
+    // Render Environment Tiles
     for (let y = 0; y < MAP_HEIGHT; y++) {
         for (let x = 0; x < MAP_WIDTH; x++) {
             let t = gameMap[y][x];
@@ -555,19 +630,24 @@ function gameLoop() {
         }
     }
 
+    // Render Ground Loot
+    groundItems.forEach(item => { drawSprite('LOOT_BAG', item.x, item.y); });
+
+    // Render Enemies
     enemies.forEach(en => {
         drawSprite(en.type, en.x, en.y);
         gCtx.fillStyle = 'black'; gCtx.fillRect(en.x * GAME_TILE + 2, en.y * GAME_TILE - 4, 28, 4);
-        gCtx.fillStyle = '#ef4444'; gCtx.fillRect(en.x * GAME_TILE + 2, en.y * GAME_TILE - 4, Math.max(0, (en.hp / 20) * 28), 4);
+        gCtx.fillStyle = '#ef4444'; gCtx.fillRect(en.x * GAME_TILE + 2, en.y * GAME_TILE - 4, Math.max(0, (en.hp / en.maxHp) * 28), 4);
     });
 
     if (playerState.hp > 0) drawSprite('HERO', playerPos.x, playerPos.y); 
 
+    // Animate Combat Damage Overlays
     for (let i = floatTexts.length - 1; i >= 0; i--) {
         let ft = floatTexts[i];
-        gCtx.fillStyle = 'rgba(0,0,0,0.7)'; gCtx.font = "bold 16px Courier New";
-        gCtx.fillText(ft.text, (ft.x * GAME_TILE) + 8 + 1, (ft.y * GAME_TILE) + 8 - ft.offset + 1); 
-        gCtx.fillStyle = ft.color; gCtx.fillText(ft.text, (ft.x * GAME_TILE) + 8, (ft.y * GAME_TILE) + 8 - ft.offset);
+        gCtx.fillStyle = 'rgba(0,0,0,0.8)'; gCtx.font = "bold 16px Courier New";
+        gCtx.fillText(ft.text, (ft.x * GAME_TILE) + 4 + 1, (ft.y * GAME_TILE) + 4 - ft.offset + 1); 
+        gCtx.fillStyle = ft.color; gCtx.fillText(ft.text, (ft.x * GAME_TILE) + 4, (ft.y * GAME_TILE) + 4 - ft.offset);
         ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
     }
     requestAnimationFrame(gameLoop);
