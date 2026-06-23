@@ -173,26 +173,23 @@
         const MAP_HEIGHT = 40;
         const VIEW_WIDTH = 16;
         const VIEW_HEIGHT = 16;
-        const GAME_TILE = 32; 
 
         // Tile Definitions
         const TILE = {
             WALL: 0, FLOOR: 1, STAIRS_DOWN: 2, CHEST_CLOSED: 3, CHEST_OPEN: 4, TRAP: 5
         };
 
-        // Rarity Colors Mapping
         const RARITY_COLORS = { "Common": "#9ca3af", "Uncommon": "#3b82f6", "Rare": "#a855f7", "Legendary": "#fbbf24" };
 
-        // Game states: "PLAYING", "EXAMINE", "DEAD"
         let gameState = "PLAYING"; 
         let gameMap = [];
+        let roomMap = []; // Tracks room IDs for Line of Sight
         let enemies = [];
         let groundItems = [];
         let floatingTexts = [];
         let playerPos = { x: 0, y: 0 };
         let examineCursor = { x: 0, y: 0 };
 
-        // Core Player Engine State Structure
         let playerState = {
             hp: 25, maxHp: 25, mp: 12, maxMp: 12, level: 1, exp: 0, maxExp: 20, gold: 0, statPoints: 0,
             stats: { str: 10, int: 10, wis: 10 },
@@ -209,43 +206,44 @@
             "Mana Potion": { type: "consumable", value: 15, rarity: "Common", desc: "Restores 12 MP instantly.", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 12); } },
             "Berserker Elixir": { type: "consumable", value: 45, rarity: "Uncommon", desc: "Gain +5 Damage until you descend to the next floor.", use: (p) => { playerState.floorBoosts.dmg += 5; } },
             "Stoneskin Tonic": { type: "consumable", value: 40, rarity: "Uncommon", desc: "Gain +4 Defense until you descend to the next floor.", use: (p) => { playerState.floorBoosts.def += 4; } },
-            "Rusty Sword": { type: "weapon", value: 15, rarity: "Common", bonusDmg: 1, desc: "+1 Damage (Flaky and old)" },
-            "Wooden Buckler": { type: "shield", value: 15, rarity: "Common", bonusDef: 1, desc: "+1 Defense (Splintered pine)" },
-            "Dual Bandit Daggers": { type: "weapon", value: 120, rarity: "Rare", bonusDmg: 2, strikes: 2, desc: "Strikes TWICE per attack action for 2 bonus DMG each hit." },
-            "Mythril Rapier": { type: "weapon", value: 240, rarity: "Rare", bonusDmg: 3, strikes: 2, desc: "Strikes TWICE per attack action. Pierces quickly." },
+            "Rusty Sword": { type: "weapon", value: 15, rarity: "Common", bonusDmg: 1, desc: "+1 Damage" },
+            "Wooden Buckler": { type: "shield", value: 15, rarity: "Common", bonusDef: 1, desc: "+1 Defense" },
+            "Dual Bandit Daggers": { type: "weapon", value: 120, rarity: "Rare", bonusDmg: 2, strikes: 2, desc: "Strikes TWICE per attack action." },
+            "Mythril Rapier": { type: "weapon", value: 240, rarity: "Rare", bonusDmg: 3, strikes: 2, desc: "Strikes TWICE per attack action." },
             "Vampiric Scythe": { type: "weapon", value: 380, rarity: "Legendary", bonusDmg: 7, lifesteal: 0.25, desc: "Heals you for 25% of clean physical damage dealt." },
             "Apprentice Chronicle": { type: "shield", value: 80, rarity: "Uncommon", bonusDef: 1, spellPowerMod: 1.25, spellCostMod: 1.2, desc: "Spells deal 25% more damage but cost 20% more mana." },
             "Forbidden Black Grimoire": { type: "shield", value: 400, rarity: "Legendary", bonusDef: 0, spellPowerMod: 2.0, spellCostMod: 1.5, desc: "Spells deal DOUBLE damage but cost 50% more mana." }
         };
 
-        // --- WEIGHTED MONSTER SYSTEM MATRIX ---
+        // --- MONSTER DATABASE ---
         const MONSTER_TEMPLATES = [
             { name: "Sewer Bat", baseWeight: 80, decay: 4, minFloor: 1, hp: 6, atk: 2, def: 0, xp: 5, color: "#a1a1aa", weaknesses: {}, resistances: {}, examineText: "A squeaking flier. Weak and simple." },
-            { name: "Goblin Marauder", baseWeight: 35, growth: 3, minFloor: 2, hp: 14, atk: 4, def: 1, xp: 12, color: "#22c55e", weaknesses: { "Fire": 1.5 }, resistances: {}, examineText: "Agile green thief. Hates fire beams." },
-            { name: "Animated Skeleton", baseWeight: 20, growth: 4, minFloor: 3, hp: 18, atk: 5, def: 2, xp: 18, color: "#e2e8f0", weaknesses: { "Fire": 2.0 }, resistances: { "Ice": 0.25 }, examineText: "Brittle bones. Highly vulnerable to flame but fully immune to freezing cold spells." },
-            { name: "Armored Iron-Clad", baseWeight: 10, growth: 3, minFloor: 4, hp: 25, atk: 4, def: 5, xp: 22, color: "#94a3b8", weaknesses: { "Lightning": 1.5 }, resistances: {}, examineText: "Walking scrap steel suit. High defense block—multi-hit low damage weapons can't scratch it!" },
-            { name: "Golden Scarab", baseWeight: 2, growth: 0.2, minFloor: 2, hp: 8, atk: 1, def: 0, xp: 60, color: "#fbbf24", isTreasureScarab: true, weaknesses: {}, resistances: {}, examineText: "Shimmering beetle. Skittish, but exploding it rewards tons of loose currency items!" },
-            { name: "Ancient Red Dragon", baseWeight: 0.5, growth: 1.5, minFloor: 1, hp: 120, atk: 22, def: 6, xp: 250, color: "#ef4444", weaknesses: { "Ice": 2.0 }, resistances: { "Fire": 0.0 }, examineText: "The pinnacle of dungeon terror. Immune to Fire, weak to Ice shards. Approach at your own peril!" }
+            { name: "Goblin Marauder", baseWeight: 35, growth: 3, minFloor: 2, hp: 14, atk: 4, def: 1, xp: 12, color: "#22c55e", weaknesses: { "Fire": 1.5 }, resistances: {}, examineText: "Agile green thief." },
+            { name: "Animated Skeleton", baseWeight: 20, growth: 4, minFloor: 3, hp: 18, atk: 5, def: 2, xp: 18, color: "#e2e8f0", weaknesses: { "Fire": 2.0 }, resistances: { "Ice": 0.25 }, examineText: "Weak to Fire, immune to Ice." },
+            { name: "Armored Iron-Clad", baseWeight: 10, growth: 3, minFloor: 4, hp: 25, atk: 4, def: 5, xp: 22, color: "#94a3b8", weaknesses: { "Lightning": 1.5 }, resistances: {}, examineText: "High defense block—multi-hit low damage weapons can't scratch it!" },
+            { name: "Golden Scarab", baseWeight: 2, growth: 0.2, minFloor: 2, hp: 8, atk: 1, def: 0, xp: 60, color: "#fbbf24", isTreasureScarab: true, weaknesses: {}, resistances: {}, examineText: "Shimmering beetle. Drops tons of gold!" },
+            { name: "Ancient Red Dragon", baseWeight: 0.5, growth: 1.5, minFloor: 1, hp: 120, atk: 22, def: 6, xp: 250, color: "#ef4444", weaknesses: { "Ice": 2.0 }, resistances: { "Fire": 0.0 }, examineText: "Immune to Fire, weak to Ice shards." }
         ];
 
-        // --- FIXED SPELLBOOK DICTIONARY ---
+        // --- FIXED SPELLBOOK ---
         const SPELL_BOOK = {
-            '1': { name: "Magic Missile", cost: 3, element: "Neutral", desc: "Pure arcane darts that hit instantly. Cannot miss. (1x INT)" },
-            '2': { name: "Arcane Blast",  cost: 5, element: "Neutral", desc: "A burst of raw energy hitting all adjacent tiles around the caster. (1.2x INT)" },
-            '3': { name: "Firebolt",      cost: 4, element: "Fire",    desc: "Hurls a small, targeted bolt of fire at closest enemy. (1.2x INT)" },
-            '4': { name: "Fireball",      cost: 9, element: "Fire",    desc: "Medium fire explosion hitting target enemy and adjacent monsters. (1.5x INT)" },
-            '5': { name: "Frost Ray",     cost: 5, element: "Ice",     desc: "Fires a line of frost damage in a straight path towards target. (1x INT)" },
-            '6': { name: "Blizzard",      cost: 12,element: "Ice",     desc: "Summons a biting ice storm targeting all enemies currently in the room. (1.4x INT)" },
-            '7': { name: "Spark",         cost: 3, element: "Lightning", desc: "Zaps an enemy. Has a 10% chance to Paralyze (skips next turn). (0.8x INT)" },
-            '8': { name: "Lightning Bolt",cost: 10,element: "Lightning", desc: "Heavy lightning strike directed at a single target location. (2.5x INT)" },
-            '9': { name: "Shield",        cost: 6, element: "Neutral", desc: "Creates a defensive barrier absorbing the next 3 incoming attacks completely." },
-            '0': { name: "Teleport",      cost: 8, element: "Cosmic",  desc: "Emergency warp. Relocates player randomly onto any open floor tile safely." },
-            '-': { name: "Banish",        cost: 15,element: "Cosmic",  desc: "Erases target non-boss enemy from reality entirely, but yields 0 EXP." }
+            '1': { name: "Magic Missile", cost: 3, element: "Neutral", desc: "Pure arcane darts. Cannot miss. (1x INT)" },
+            '2': { name: "Arcane Blast",  cost: 5, element: "Neutral", desc: "Hits all adjacent tiles around caster. (1.2x INT)" },
+            '3': { name: "Firebolt",      cost: 4, element: "Fire",    desc: "Small, targeted bolt of fire. (1.2x INT)" },
+            '4': { name: "Fireball",      cost: 9, element: "Fire",    desc: "Explosion hitting target and adjacent tiles. (1.5x INT)" },
+            '5': { name: "Frost Ray",     cost: 5, element: "Ice",     desc: "Fires a line of frost damage. (1x INT)" },
+            '6': { name: "Blizzard",      cost: 12,element: "Ice",     desc: "Summons an ice storm targeting all visible room enemies. (1.4x INT)" },
+            '7': { name: "Spark",         cost: 3, element: "Lightning", desc: "Zaps an enemy. 10% chance to Paralyze. (0.8x INT)" },
+            '8': { name: "Lightning Bolt",cost: 10,element: "Lightning", desc: "Heavy lightning strike to a single target. (2.5x INT)" },
+            '9': { name: "Shield",        cost: 6, element: "Neutral", desc: "Absorbs the next 3 incoming attacks completely." },
+            '0': { name: "Teleport",      cost: 8, element: "Cosmic",  desc: "Relocates player randomly onto a safe floor tile." },
+            '-': { name: "Banish",        cost: 15,element: "Cosmic",  desc: "Erases target non-boss enemy entirely, yields 0 EXP." }
         };
 
-        // --- PROCEDURAL ENGINE DUNGEON MAP CREATION ---
+        // --- MAP GENERATION WITH ROOM TRACKING ---
         function generateMap() {
             gameMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(TILE.WALL));
+            roomMap = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(0)); // 0 means Corridor/Wall
             enemies = [];
             groundItems = [];
             playerState.hasBossKey = false;
@@ -264,9 +262,13 @@
                     if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) overlap = true;
                 }
                 if (!overlap) {
-                    rooms.push({ x, y, w, h, cx: Math.floor(x + w/2), cy: Math.floor(y + h/2) });
+                    let roomId = rooms.length + 1; // Unique ID for each room
+                    rooms.push({ x, y, w, h, cx: Math.floor(x + w/2), cy: Math.floor(y + h/2), id: roomId });
                     for (let ry = y; ry < y + h; ry++) {
-                        for (let rx = x; rx < x + w; rx++) gameMap[ry][rx] = TILE.FLOOR;
+                        for (let rx = x; rx < x + w; rx++) {
+                            gameMap[ry][rx] = TILE.FLOOR;
+                            roomMap[ry][rx] = roomId;
+                        }
                     }
                 }
             }
@@ -280,25 +282,19 @@
                 while (ty !== r2.cy) { gameMap[ty][r2.cx] = TILE.FLOOR; ty += Math.sign(r2.cy - ty); }
             }
 
-            // Put Player in Room 1
             playerPos.x = rooms[0].cx;
             playerPos.y = rooms[0].cy;
 
-            // Put Exit Stairs in Last Room
             let lastRoom = rooms[rooms.length - 1];
             gameMap[lastRoom.cy][lastRoom.cx] = TILE.STAIRS_DOWN;
 
-            // Populate Decorative Items, Chests, and Traps
             rooms.forEach((r, idx) => {
-                if (idx === 0) return; // Skip player room
-                
-                // Add Chests
+                if (idx === 0) return;
                 if (Math.random() < 0.40) {
                     let cx = r.x + Math.floor(Math.random() * (r.w - 1));
                     let cy = r.y + Math.floor(Math.random() * (r.h - 1));
                     if (gameMap[cy][cx] === TILE.FLOOR) gameMap[cy][cx] = TILE.CHEST_CLOSED;
                 }
-                // Add Spikes/Traps
                 if (Math.random() < 0.25) {
                     let tx = r.x + Math.floor(Math.random() * (r.w - 1));
                     let ty = r.y + Math.floor(Math.random() * (r.h - 1));
@@ -306,15 +302,14 @@
                 }
             });
 
-            // --- PROBABILISTIC DYNAMIC SPAWNER ---
+            // Enemy Spawning
             let isBossFloor = (playerState.dungeonFloor % 10 === 0);
             let tierMultiplier = Math.floor((playerState.dungeonFloor - 1) / 10) + 1;
 
             rooms.forEach((r, idx) => {
-                if (idx === 0) return; // Skip player room
+                if (idx === 0) return;
 
                 if (isBossFloor && idx === rooms.length - 1) {
-                    // Spawn Floor Gatekeeper Boss
                     enemies.push({
                         x: r.cx, y: r.cy, name: `Dread Gatekeeper (Tier ${tierMultiplier})`,
                         hp: (55 + playerState.dungeonFloor * 6) * tierMultiplier,
@@ -324,7 +319,6 @@
                         color: "#ef4444", isBoss: true, isParalyzed: false
                     });
                 } else if (Math.random() < 0.55) {
-                    // Spawn Scaled Weight-Based Regular Enemies
                     let generated = getWeightedEnemyRoll(playerState.dungeonFloor);
                     let ex = r.x + Math.floor(Math.random() * (r.w - 1));
                     let ey = r.y + Math.floor(Math.random() * (r.h - 1));
@@ -345,68 +339,43 @@
             updateUI();
         }
 
-        // Weight Distribution Calculator
         function getWeightedEnemyRoll(floor) {
-            let pool = [];
-            let totalWeight = 0;
-
+            let pool = []; let totalWeight = 0;
             MONSTER_TEMPLATES.forEach(m => {
                 if (floor >= m.minFloor) {
                     let weight = m.baseWeight;
                     if (m.decay) weight = Math.max(1, m.baseWeight - (floor * m.decay));
                     if (m.growth) weight = m.baseWeight + (floor * m.growth);
-                    pool.push({ template: m, w: weight });
-                    totalWeight += weight;
+                    pool.push({ template: m, w: weight }); totalWeight += weight;
                 }
             });
-
-            let roll = Math.random() * totalWeight;
-            let currentSum = 0;
+            let roll = Math.random() * totalWeight; let currentSum = 0;
             for (let p of pool) {
                 currentSum += p.w;
                 if (roll <= currentSum) {
-                    return {
-                        name: p.template.name,
-                        hp: p.template.hp + (floor * 2),
-                        atk: p.template.atk + Math.floor(floor / 2),
-                        def: p.template.def,
-                        xp: p.template.xp,
-                        color: p.template.color
-                    };
+                    return { name: p.template.name, hp: p.template.hp + (floor * 2), atk: p.template.atk + Math.floor(floor / 2), def: p.template.def, xp: p.template.xp, color: p.template.color };
                 }
             }
-            return { name: "Slime", hp: 10, atk: 2, def: 0, xp: 5, color: "#10b981" };
+            return { name: "Sewer Bat", hp: 6, atk: 2, def: 0, xp: 5, color: "#a1a1aa" };
         }
 
         function getWeightedLootRoll(floor) {
-            let pool = [];
-            let totalWeight = 0;
-
+            let pool = []; let totalWeight = 0;
             for (let name in ITEM_DB) {
-                let item = ITEM_DB[name];
-                let weight = 10;
+                let item = ITEM_DB[name]; let weight = 10;
                 if (item.rarity === "Common") weight = Math.max(10, 100 - (floor * 5));
                 if (item.rarity === "Uncommon") weight = 30 + (floor * 3);
                 if (item.rarity === "Rare") weight = 5 + (floor * 4);
-                if (item.rarity === "Legendary") weight = 0.5 + (floor * 1.5); // 0.5% base chance on Floor 1
-
-                pool.push({ name, item, w: weight });
-                totalWeight += weight;
+                if (item.rarity === "Legendary") weight = 0.5 + (floor * 1.5);
+                pool.push({ name, item, w: weight }); totalWeight += weight;
             }
-
-            let roll = Math.random() * totalWeight;
-            let currentSum = 0;
+            let roll = Math.random() * totalWeight; let currentSum = 0;
             for (let p of pool) {
                 currentSum += p.w;
-                if (roll <= currentSum) {
-                    let cloned = JSON.parse(JSON.stringify(p.item));
-                    cloned.name = p.name;
-                    return cloned;
-                }
+                if (roll <= currentSum) { let cloned = JSON.parse(JSON.stringify(p.item)); cloned.name = p.name; return cloned; }
             }
         }
 
-        // --- SECONDARY DERIVED CALCULATIONS ---
         function recalculateSecondaryStats() {
             playerState.maxHp = 20 + (playerState.stats.wis * 1);
             playerState.maxMp = 10 + (playerState.stats.int * 1);
@@ -416,58 +385,60 @@
 
         function getEquipBonus(stat) {
             let bonus = 0;
-            if (stat === 'dmg' && playerState.equipment.weapon) {
-                bonus += ITEM_DB[playerState.equipment.weapon].bonusDmg || 0;
-            }
-            if (stat === 'def' && playerState.equipment.shield) {
-                bonus += ITEM_DB[playerState.equipment.shield].bonusDef || 0;
-            }
+            if (stat === 'dmg' && playerState.equipment.weapon) bonus += ITEM_DB[playerState.equipment.weapon].bonusDmg || 0;
+            if (stat === 'def' && playerState.equipment.shield) bonus += ITEM_DB[playerState.equipment.shield].bonusDef || 0;
             return bonus;
         }
 
-        // --- CORE LOGISTICS TURN HANDLING LOOP ---
+        // --- LINE OF SIGHT VISIBILITY CHECKER ---
+        function isTileVisible(x, y) {
+            let currentPlayerRoom = roomMap[playerPos.y][playerPos.x];
+            
+            // 1. If player is in a room, they see everything in that exact room
+            if (currentPlayerRoom !== 0 && roomMap[y][x] === currentPlayerRoom) {
+                return true;
+            }
+            
+            // 2. Player always sees adjacent corridor tiles right next to them
+            if (Math.abs(x - playerPos.x) <= 1 && Math.abs(y - playerPos.y) <= 1) {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // --- GAME PLAY ACTION INTERCEPTORS ---
         function handlePlayerAction(dx, dy) {
             if (gameState !== "PLAYING") return;
 
             let targetX = playerPos.x + dx;
             let targetY = playerPos.y + dy;
-
             if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return;
 
             let tile = gameMap[targetY][targetX];
 
-            // 1. Collision Attack Resolution
             let enemyIdx = enemies.findIndex(en => en.x === targetX && en.y === targetY);
             if (enemyIdx !== -1) {
                 executeMeleeAttack(enemies[enemyIdx]);
-                processMonsterTurns();
-                return;
+                processMonsterTurns(); return;
             }
 
-            // 2. Walkable Assessment
-            if (tile === TILE.WALL) {
-                document.getElementById('log').innerText = "Blocked by stone walls.";
-                return;
-            }
+            if (tile === TILE.WALL) { document.getElementById('log').innerText = "Blocked by stone walls."; return; }
 
-            // 3. Move Player Coordinates
             playerPos.x = targetX;
             playerPos.y = targetY;
 
-            // 4. Trap Trigger Interaction
             if (tile === TILE.TRAP) {
                 let trapDmg = 4 + Math.floor(Math.random() * 4);
                 playerState.hp -= trapDmg;
                 spawnText(playerPos.x, playerPos.y, `-${trapDmg} Trap!`, '#ef4444');
                 document.getElementById('log').innerHTML = `💥 <span class='danger'>Triggered arrow trap plate! Sustained ${trapDmg} damage.</span>`;
-                gameMap[targetY][targetX] = TILE.FLOOR; // Clear trap
+                gameMap[targetY][targetX] = TILE.FLOOR;
             }
 
-            // 5. Chest Dynamic Reveal Interaction
             if (tile === TILE.CHEST_CLOSED) {
-                // Determine 5% Mimic Chance
                 if (Math.random() < 0.05) {
-                    document.getElementById('log').innerHTML = "💥 <span class='danger'>THE CHEST SPRINGS TO LIFE! Teeth snap wildly!</span>";
+                    document.getElementById('log').innerHTML = "💥 <span class='danger'>THE CHEST SPRINGS TO LIFE! It's a Mimic!</span>";
                     gameMap[targetY][targetX] = TILE.FLOOR;
                     enemies.push({
                         x: targetX, y: targetY, name: 'Flesh-Eating Mimic',
@@ -477,9 +448,8 @@
                     spawnText(targetX, targetY, "MIMIC!", '#ef4444');
                 } else {
                     if (playerState.inventory.length >= 10) {
-                        document.getElementById('log').innerText = "🎒 Bag space full! Cannot unlock chest.";
-                        playerPos.x -= dx; playerPos.y -= dy; // Bump back
-                        return;
+                        document.getElementById('log').innerText = "🎒 Bag space full!";
+                        playerPos.x -= dx; playerPos.y -= dy; return;
                     }
                     gameMap[targetY][targetX] = TILE.CHEST_OPEN;
                     let loot = getWeightedLootRoll(playerState.dungeonFloor);
@@ -494,113 +464,67 @@
 
         function executeMeleeAttack(target) {
             let wpn = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
-            let strikes = wpn?.strikes || 1;
-            let totalDealt = 0;
+            let strikes = wpn?.strikes || 1; let totalDealt = 0;
 
             for (let s = 0; s < strikes; s++) {
                 if (target.hp <= 0) break;
-
                 let baseDmg = 1 + Math.floor(playerState.stats.str / 4);
                 let wpnDmg = wpn?.bonusDmg || 0;
                 let finalDmg = Math.max(1, (baseDmg + wpnDmg + playerState.floorBoosts.dmg) - target.def);
-
-                target.hp -= finalDmg;
-                totalDealt += finalDmg;
+                target.hp -= finalDmg; totalDealt += finalDmg;
                 spawnText(target.x, target.y, `-${finalDmg}`, s === 0 ? '#ef4444' : '#f43f5e');
             }
+            document.getElementById('log').innerText = `💥 Dealt ${totalDealt} damage to ${target.name}.`;
 
-            document.getElementById('log').innerText = `💥 Dealt ${totalDealt} physical damage to ${target.name}.`;
-
-            // Lifesteal Passive
             if (wpn?.lifesteal && totalDealt > 0) {
                 let heal = Math.floor(totalDealt * wpn.lifesteal);
-                if (heal > 0) {
-                    playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
-                    spawnText(playerPos.x, playerPos.y, `+${heal} HP`, '#10b981');
-                }
+                if (heal > 0) { playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal); spawnText(playerPos.x, playerPos.y, `+${heal} HP`, '#10b981'); }
             }
 
-            // Defeat Handling
             if (target.hp <= 0) {
-                let idx = enemies.indexOf(target);
-                enemies.splice(idx, 1);
-                
+                enemies.splice(enemies.indexOf(target), 1);
                 if (target.isBoss) {
                     playerState.hasBossKey = true;
-                    document.getElementById('log').innerHTML = "🔑 <span class='legendary'>BOSS DEFEATED! The key to the deep stairs is yours.</span>";
-                    spawnText(target.x, target.y, "🔑 KEY", '#fbbf24');
-                } else {
-                    document.getElementById('log').innerText += ` Slain! Gained ${target.xpValue} EXP.`;
+                    document.getElementById('log').innerHTML = "🔑 <span class='legendary'>BOSS DEFEATED! Gate key claimed.</span>";
                 }
-
-                // Treasure Scarab Bonus Drops
                 let template = MONSTER_TEMPLATES.find(m => m.name === target.name);
-                if (template?.isTreasureScarab) {
-                    playerState.gold += 80 + (playerState.dungeonFloor * 20);
-                }
+                if (template?.isTreasureScarab) playerState.gold += 80 + (playerState.dungeonFloor * 20);
 
                 playerState.exp += target.xpValue;
                 if (playerState.exp >= playerState.maxExp) {
-                    playerState.level++;
-                    playerState.exp -= playerState.maxExp;
+                    playerState.level++; playerState.exp -= playerState.maxExp;
                     playerState.maxExp = Math.floor(playerState.maxExp * 1.5);
-                    playerState.statPoints += 2;
-                    playerState.hp = playerState.maxHp;
-                    playerState.mp = playerState.maxMp;
-                    document.getElementById('log').innerHTML = "🌟 <span class='bonus'>LEVEL UP! Health/Mana restored. +2 Stat points allocated!</span>";
-                    spawnText(playerPos.x, playerPos.y, "LEVEL UP!", '#fbbf24');
+                    playerState.statPoints += 2; playerState.hp = playerState.maxHp; playerState.mp = playerState.maxMp;
+                    updateUI();
                 }
             }
         }
 
-        // --- ENEMY AI PASS LOOP ---
         function processMonsterTurns() {
             enemies.forEach(en => {
                 if (en.hp <= 0) return;
-
-                if (en.isParalyzed) {
-                    en.isParalyzed = false; 
-                    spawnText(en.x, en.y, "⚡ Paralyzed", '#94a3b8');
-                    return;
-                }
+                if (en.isParalyzed) { en.isParalyzed = false; return; }
 
                 let dist = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
                 if (dist === 1) {
-                    // Attack Player Block
                     if (playerState.shieldStacks > 0) {
                         playerState.shieldStacks--;
-                        document.getElementById('log').innerHTML = "🛡️ <span style='color:#38bdf8;'>Shield spell absorbed the blow completely!</span>";
                         spawnText(playerPos.x, playerPos.y, "ABSORBED", '#38bdf8');
                     } else {
                         let finalAtk = Math.max(1, en.atk - (getEquipBonus('def') + playerState.floorBoosts.def));
-                        playerState.hp -= finalAtk;
-                        spawnText(playerPos.x, playerPos.y, `-${finalAtk}`, '#ef4444');
-                        document.getElementById('log').innerHTML = `💔 ${en.name} strikes you for <span class='danger'>${finalAtk} damage</span>.`;
+                        playerState.hp -= finalAtk; spawnText(playerPos.x, playerPos.y, `-${finalAtk}`, '#ef4444');
                     }
-                } else if (dist < 7) {
-                    // Primitive Aggro Chase Pathing
+                } else if (dist < 7 && isTileVisible(en.x, en.y)) { // Monsters only hunt if they are in the light!
                     let stepX = Math.sign(playerPos.x - en.x);
                     let stepY = Math.sign(playerPos.y - en.y);
-
                     let nextX = en.x + stepX;
-                    let nextY = en.y;
-
-                    // Try moving horizontally, if blocked try vertically
-                    if (gameMap[en.y][nextX] === TILE.FLOOR && !enemies.some(e => e.x === nextX && e.y === en.y)) {
-                        en.x = nextX;
-                    } else if (gameMap[en.y + stepY][en.x] === TILE.FLOOR && !enemies.some(e => e.x === en.x && e.y === en.y + stepY)) {
-                        en.y += stepY;
-                    }
+                    if (gameMap[en.y][nextX] === TILE.FLOOR && !enemies.some(e => e.x === nextX && e.y === en.y)) en.x = nextX;
+                    else if (gameMap[en.y + stepY][en.x] === TILE.FLOOR && !enemies.some(e => e.x === en.x && e.y === en.y + stepY)) en.y += stepY;
                 }
             });
-
-            if (playerState.hp <= 0) {
-                gameState = "DEAD";
-                document.getElementById('log').innerHTML = "💀 <span class='danger'>YOU HAVE DIED. Refresh browser page to restore checkpoint.</span>";
-            }
+            if (playerState.hp <= 0) gameState = "DEAD";
         }
 
-        // --- UNIFIED SPELL PROCESSING ENGINE ---
         function castSpell(keyStr) {
             let spell = SPELL_BOOK[keyStr];
             if (!spell || gameState !== "PLAYING") return;
@@ -609,143 +533,90 @@
             let finalCost = Math.ceil(spell.cost * (book?.spellCostMod || 1.0));
             let powerMod = book?.spellPowerMod || 1.0;
 
-            if (playerState.mp < finalCost) {
-                document.getElementById('log').innerText = `❌ Insufficient Mana! Requires ${finalCost} MP. Invest in INT.`;
-                return;
-            }
+            if (playerState.mp < finalCost) return;
 
-            let target = null;
-            let closestDist = 5;
+            let target = null; let closestDist = 6;
             enemies.forEach(en => {
-                let d = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
-                if (d < closestDist) { closestDist = d; target = en; }
+                if (isTileVisible(en.x, en.y)) { // Can only cast on targets you can see in the room!
+                    let d = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
+                    if (d < closestDist) { closestDist = d; target = en; }
+                }
             });
 
             let intBonus = playerState.stats.int;
-
             function evalMagicDmg(base, elem, eObj) {
                 let raw = Math.floor(base * powerMod);
                 let t = MONSTER_TEMPLATES.find(m => m.name === eObj.name) || {};
-                if (t.weaknesses?.[elem]) { raw = Math.floor(raw * t.weaknesses[elem]); spawnText(eObj.x, eObj.y, "WEAKNESS!", '#fbbf24'); }
-                if (t.resistances?.[elem]) { raw = Math.floor(raw * t.resistances[elem]); spawnText(eObj.x, eObj.y, "Resisted", '#94a3b8'); }
+                if (t.weaknesses?.[elem]) raw = Math.floor(raw * t.weaknesses[elem]);
+                if (t.resistances?.[elem]) raw = Math.floor(raw * t.resistances[elem]);
                 return Math.max(1, raw);
             }
 
             switch(spell.name) {
                 case "Magic Missile":
-                    if (!target) return;
-                    playerState.mp -= finalCost;
-                    let mm = evalMagicDmg(intBonus, spell.element, target);
-                    target.hp -= mm; spawnText(target.x, target.y, `-${mm}`, '#a855f7');
-                    document.getElementById('log').innerText = `✨ Magic Missile zapped ${target.name} for ${mm} damage.`;
-                    break;
-
+                    if (!target) return; playerState.mp -= finalCost;
+                    let mm = evalMagicDmg(intBonus, spell.element, target); target.hp -= mm; spawnText(target.x, target.y, `-${mm}`, '#a855f7'); break;
                 case "Arcane Blast":
                     playerState.mp -= finalCost;
                     enemies.forEach(en => {
                         if (Math.abs(en.x - playerPos.x) <= 1 && Math.abs(en.y - playerPos.y) <= 1) {
-                            let ab = evalMagicDmg(Math.floor(intBonus * 1.2), spell.element, en);
-                            en.hp -= ab; spawnText(en.x, en.y, `-${ab} 💥`, '#a855f7');
+                            let ab = evalMagicDmg(Math.floor(intBonus * 1.2), spell.element, en); en.hp -= ab; spawnText(en.x, en.y, `-${ab} 💥`, '#a855f7');
                         }
-                    });
-                    document.getElementById('log').innerText = "💥 Arcane Blast detonated outwards around your tile grid space.";
-                    break;
-
+                    }); break;
                 case "Firebolt":
-                    if (!target) return;
-                    playerState.mp -= finalCost;
-                    let fb = evalMagicDmg(Math.floor(intBonus * 1.2), spell.element, target);
-                    target.hp -= fb; spawnText(target.x, target.y, `-${fb} 🔥`, '#ef4444');
-                    break;
-
+                    if (!target) return; playerState.mp -= finalCost;
+                    let fb = evalMagicDmg(Math.floor(intBonus * 1.2), spell.element, target); target.hp -= fb; spawnText(target.x, target.y, `-${fb} 🔥`, '#ef4444'); break;
                 case "Fireball":
-                    if (!target) return;
-                    playerState.mp -= finalCost;
+                    if (!target) return; playerState.mp -= finalCost;
                     let tx = target.x, ty = target.y;
                     enemies.forEach(en => {
                         if (Math.abs(en.x - tx) <= 1 && Math.abs(en.y - ty) <= 1) {
-                            let f = evalMagicDmg(Math.floor(intBonus * 1.5), spell.element, en);
-                            en.hp -= f; spawnText(en.x, en.y, `-${f} ☄️`, '#f97316');
+                            let f = evalMagicDmg(Math.floor(intBonus * 1.5), spell.element, en); en.hp -= f; spawnText(en.x, en.y, `-${f} ☄️`, '#f97316');
                         }
-                    });
-                    document.getElementById('log').innerText = "☄️ Fireball exploded splashing damage across adjacent tiles!";
-                    break;
-
+                    }); break;
                 case "Frost Ray":
-                    if (!target) return;
-                    playerState.mp -= finalCost;
+                    if (!target) return; playerState.mp -= finalCost;
                     let dx = Math.sign(target.x - playerPos.x), dy = Math.sign(target.y - playerPos.y);
                     enemies.forEach(en => {
-                        if ((en.y - playerPos.y) * dx - (en.x - playerPos.x) * dy === 0) {
-                            let fr = evalMagicDmg(intBonus, spell.element, en);
-                            en.hp -= fr; spawnText(en.x, en.y, `-${fr} ❄️`, '#60a5fa');
+                        if ((en.y - playerPos.y) * dx - (en.x - playerPos.x) * dy === 0 && isTileVisible(en.x, en.y)) {
+                            let fr = evalMagicDmg(intBonus, spell.element, en); en.hp -= fr; spawnText(en.x, en.y, `-${fr} ❄️`, '#60a5fa');
                         }
-                    });
-                    document.getElementById('log').innerText = "❄️ Frost Ray channels freezing paths in a straight line trajectory.";
-                    break;
-
+                    }); break;
                 case "Blizzard":
                     playerState.mp -= finalCost;
                     enemies.forEach(en => {
-                        let b = evalMagicDmg(Math.floor(intBonus * 1.4), spell.element, en);
-                        en.hp -= b; spawnText(en.x, en.y, `-${b} 🌨️`, '#38bdf8');
-                    });
-                    document.getElementById('log').innerText = "🌨️ Biting Blizzard strikes all monsters currently present inside the layout chambers.";
-                    break;
-
+                        if (isTileVisible(en.x, en.y)) {
+                            let b = evalMagicDmg(Math.floor(intBonus * 1.4), spell.element, en); en.hp -= b; spawnText(en.x, en.y, `-${b} 🌨️`, '#38bdf8');
+                        }
+                    }); break;
                 case "Spark":
-                    if (!target) return;
-                    playerState.mp -= finalCost;
-                    let spk = evalMagicDmg(Math.floor(intBonus * 0.8), spell.element, target);
-                    target.hp -= spk;
+                    if (!target) return; playerState.mp -= finalCost;
+                    let spk = evalMagicDmg(Math.floor(intBonus * 0.8), spell.element, target); target.hp -= spk;
                     if (Math.random() < 0.10) { target.isParalyzed = true; spawnText(target.x, target.y, "⚡ PARALYZED", '#fbbf24'); }
-                    else { spawnText(target.x, target.y, `-${spk} ⚡`, '#fbbf24'); }
-                    break;
-
+                    else { spawnText(target.x, target.y, `-${spk} ⚡`, '#fbbf24'); } break;
                 case "Lightning Bolt":
-                    if (!target) return;
-                    playerState.mp -= finalCost;
-                    let lb = evalMagicDmg(Math.floor(intBonus * 2.5), spell.element, target);
-                    target.hp -= lb; spawnText(target.x, target.y, `-${lb} ⚡⚡`, '#fbbf24');
-                    break;
-
+                    if (!target) return; playerState.mp -= finalCost;
+                    let lb = evalMagicDmg(Math.floor(intBonus * 2.5), spell.element, target); target.hp -= lb; spawnText(target.x, target.y, `-${lb} ⚡⚡`, '#fbbf24'); break;
                 case "Shield":
-                    playerState.mp -= finalCost;
-                    playerState.shieldStacks = 3;
-                    spawnText(playerPos.x, playerPos.y, "🛡️ ACCRUED", '#38bdf8');
-                    document.getElementById('log').innerText = "🛡️ Arcane barrier deployed! Next 3 attacks will absorb cleanly.";
-                    break;
-
+                    playerState.mp -= finalCost; playerState.shieldStacks = 3; spawnText(playerPos.x, playerPos.y, "🛡️ ACCRUED", '#38bdf8'); break;
                 case "Teleport":
-                    playerState.mp -= finalCost;
-                    let safelyPlaced = false;
+                    playerState.mp -= finalCost; let safelyPlaced = false;
                     while (!safelyPlaced) {
-                        let rx = Math.floor(Math.random() * MAP_WIDTH);
-                        let ry = Math.floor(Math.random() * MAP_HEIGHT);
+                        let rx = Math.floor(Math.random() * MAP_WIDTH); let ry = Math.floor(Math.random() * MAP_HEIGHT);
                         if (gameMap[ry][rx] === TILE.FLOOR) { playerPos.x = rx; playerPos.y = ry; safelyPlaced = true; }
-                    }
-                    spawnText(playerPos.x, playerPos.y, "🌀 WARP", '#a855f7');
-                    break;
-
+                    } break;
                 case "Banish":
-                    if (!target || target.isBoss) return;
-                    playerState.mp -= finalCost;
-                    enemies.splice(enemies.indexOf(target), 1);
-                    document.getElementById('log').innerText = "💨 Target banished from dimensional space. Yielded 0 EXP.";
-                    break;
+                    if (!target || target.isBoss) return; playerState.mp -= finalCost;
+                    enemies.splice(enemies.indexOf(target), 1); break;
             }
 
-            // Cleanup any monsters slain by spellcasting
             enemies = enemies.filter(en => {
-                if (en.hp <= 0 && en.isBoss) { playerState.hasBossKey = true; spawnText(en.x, en.y, "🔑 KEY", '#fbbf24'); }
+                if (en.hp <= 0 && en.isBoss) playerState.hasBossKey = true;
                 return en.hp > 0;
             });
-
-            processMonsterTurns();
-            updateUI();
+            processMonsterTurns(); updateUI();
         }
 
-        // --- LOOK / EXAMINE TACTICAL HOOK ---
         function processExamineStep(key) {
             if (key === 'w' || key === 'ArrowUp') examineCursor.y--;
             if (key === 's' || key === 'ArrowDown') examineCursor.y++;
@@ -756,147 +627,106 @@
             examineCursor.y = Math.max(0, Math.min(examineCursor.y, MAP_HEIGHT - 1));
 
             let ex = examineCursor.x, ey = examineCursor.y;
+            
+            // You cannot look into rooms you are not standing inside!
+            if (!isTileVisible(ex, ey)) {
+                document.getElementById('log').innerText = "🔎 Too dark to look over there. Enter the room first.";
+                return;
+            }
+
             let en = enemies.find(e => e.x === ex && e.y === ey);
-            let item = groundItems.find(i => i.x === ex && i.y === ey);
             let tile = gameMap[ey][ex];
 
             if (en) {
                 let t = MONSTER_TEMPLATES.find(m => m.name === en.name) || {};
-                let desc = t.examineText || "A dark dungeon anomaly.";
-                let dangerText = en.atk >= playerState.hp ? "<span class='danger'>DEADLY (Can 1-shot you!)</span>" : "<span class='bonus'>MANAGEABLE</span>";
-                document.getElementById('log').innerHTML = `🔎 <strong>${en.name}</strong>: "${desc}" <br>Threat evaluation: ${dangerText}`;
+                let dangerText = en.atk >= playerState.hp ? "<span class='danger'>DEADLY</span>" : "<span class='bonus'>EASY</span>";
+                document.getElementById('log').innerHTML = `🔎 <strong>${en.name}</strong>: "${t.examineText || 'A beast.'}" <br>Threat evaluation: ${dangerText}`;
             } else if (tile === TILE.CHEST_CLOSED) {
-                document.getElementById('log').innerText = "🔎 Treasure Chest structure. Might contain gear, or could be a hidden mimic...";
+                document.getElementById('log').innerText = "🔎 Treasure Chest. Could be a hidden mimic...";
             } else if (tile === TILE.STAIRS_DOWN) {
-                document.getElementById('log').innerText = "🔎 Dark staircase opening leading down deeper into the next layout floor.";
+                document.getElementById('log').innerText = "🔎 A dark staircase opening leading down deeper.";
             } else {
-                document.getElementById('log').innerText = `🔎 Inspecting coordinates [${ex}, ${ey}]. Clean passage space.`;
+                document.getElementById('log').innerText = `🔎 Inspecting clean room passage space.`;
             }
         }
 
-        // --- PERSISTENCE TOWN PORTAL & SAVING ---
         function travelToTown() {
-            playerState.hp = playerState.maxHp;
-            playerState.mp = playerState.maxMp;
-            
-            // Calculate base boundary of current 10-floor safety chunk
-            let chunkStart = Math.floor((playerState.dungeonFloor - 1) / 10) * 10 + 1;
-            playerState.dungeonFloor = chunkStart;
-            playerState.floorBoosts.dmg = 0;
-            playerState.floorBoosts.def = 0;
-
-            document.getElementById('log').innerHTML = "🏡 <span class='bonus'>Returned to safe town hub! Restored health/mana pools. Returning to dungeon resets you to start of current chunk floor.</span>";
+            playerState.hp = playerState.maxHp; playerState.mp = playerState.maxMp;
+            playerState.dungeonFloor = Math.floor((playerState.dungeonFloor - 1) / 10) * 10 + 1;
+            playerState.floorBoosts.dmg = 0; playerState.floorBoosts.def = 0;
             generateMap();
         }
 
-        function saveGameCheckpoint() {
-            localStorage.setItem('oddy_save_floor', playerState.highestReachedFloor);
-            localStorage.setItem('oddy_save_state', JSON.stringify(playerState));
-        }
-
-        function loadGameCheckpoint() {
-            let saved = localStorage.getItem('oddy_save_state');
-            if (saved) {
-                playerState = JSON.parse(saved);
-                document.getElementById('log').innerText = "💾 Restored safe saved progress from your last descent!";
-            }
-        }
-
-        // --- FLOATING ENGINE TEXT EFFECTS ---
-        function spawnText(x, y, text, color) {
-            floatingTexts.push({ x: x * TILE_SIZE + 8, y: y * TILE_SIZE, text, color, timer: 35 });
-        }
-
-        // --- GRAPHICS CANVAS RENDERER PASS ---
+        // --- GRAPHICS CANVAS RENDERER PASS WITH FOG ---
         function gameLoop() {
             ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Center Camera Tracking
             let camX = Math.max(0, Math.min(playerPos.x - VIEW_WIDTH / 2, MAP_WIDTH - VIEW_WIDTH));
             let camY = Math.max(0, Math.min(playerPos.y - VIEW_HEIGHT / 2, MAP_HEIGHT - VIEW_HEIGHT));
 
-            // 1. Draw Map Layer
+            // 1. Draw Visible Layer Elements
             for (let y = 0; y < VIEW_HEIGHT; y++) {
                 for (let x = 0; x < VIEW_WIDTH; x++) {
                     let mx = Math.floor(camX + x);
                     let my = Math.floor(camY + y);
-                    let tile = gameMap[my][mx];
-
                     let scrX = x * TILE_SIZE;
                     let scrY = y * TILE_SIZE;
 
+                    // FOG OF WAR CHECK: If tile isn't within visible space, draw solid pitch black void
+                    if (!isTileVisible(mx, my)) {
+                        ctx.fillStyle = "#000000";
+                        ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
+                        continue;
+                    }
+
+                    let tile = gameMap[my][mx];
                     if (tile === TILE.WALL) {
                         ctx.fillStyle = "#374151"; ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
                         ctx.strokeStyle = "#1f2937"; ctx.strokeRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
                     } else if (tile === TILE.FLOOR || tile === TILE.TRAP) {
                         ctx.fillStyle = "#111827"; ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
-                        // Subtle grid points matching minimal art layout
                         ctx.fillStyle = "#1f2937"; ctx.fillRect(scrX + 14, scrY + 14, 4, 4);
                     } else if (tile === TILE.STAIRS_DOWN) {
                         ctx.fillStyle = "#047857"; ctx.fillRect(scrX, scrY, TILE_SIZE, TILE_SIZE);
-                        ctx.fillStyle = "#065f46"; ctx.fillRect(scrX + 4, scrY + 4, 24, 6);
-                        ctx.fillRect(scrX + 8, scrY + 14, 16, 6);
                     } else if (tile === TILE.CHEST_CLOSED) {
                         ctx.fillStyle = "#78350f"; ctx.fillRect(scrX + 6, scrY + 8, 20, 18);
-                        ctx.fillStyle = "#d97706"; ctx.fillRect(scrX + 14, scrY + 14, 4, 6); // Lock block
                     } else if (tile === TILE.CHEST_OPEN) {
                         ctx.fillStyle = "#451a03"; ctx.fillRect(scrX + 6, scrY + 12, 20, 14);
                     }
                 }
             }
 
-            // 2. Draw Loot Items on Ground
-            groundItems.forEach(item => {
-                let sx = item.x - camX; let sy = item.y - camY;
-                if (sx >= 0 && sx < VIEW_WIDTH && sy >= 0 && sy < VIEW_HEIGHT) {
-                    ctx.fillStyle = RARITY_COLORS[item.rarity] || "#fbbf24";
-                    ctx.beginPath(); ctx.arc(sx * TILE_SIZE + 16, sy * TILE_SIZE + 16, 6, 0, Math.PI * 2); ctx.fill();
-                }
-            });
-
-            // 3. Draw Active Enemies Layer
+            // 2. Draw Visible Enemies
             enemies.forEach(en => {
+                if (!isTileVisible(en.x, en.y)) return; // Hidden in darkness!
                 let sx = en.x - camX; let sy = en.y - camY;
                 if (sx >= 0 && sx < VIEW_WIDTH && sy >= 0 && sy < VIEW_HEIGHT) {
-                    ctx.fillStyle = en.color;
-                    ctx.fillRect(sx * TILE_SIZE + 4, sy * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-
-                    // Health Indicator bars overlaying the entity space
+                    ctx.fillStyle = en.color; ctx.fillRect(sx * TILE_SIZE + 4, sy * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
                     let pct = en.hp / en.maxHp;
                     ctx.fillStyle = "#b91c1c"; ctx.fillRect(sx * TILE_SIZE + 2, sy * TILE_SIZE - 2, TILE_SIZE - 4, 4);
                     ctx.fillStyle = "#10b981"; ctx.fillRect(sx * TILE_SIZE + 2, sy * TILE_SIZE - 2, (TILE_SIZE - 4) * pct, 4);
                 }
             });
 
-            // 4. Draw Player Entity Token
-            let psx = playerPos.x - camX;
-            let psy = playerPos.y - camY;
-            ctx.fillStyle = "#fbbf24"; // Vibrant Golden Character Box
-            ctx.fillRect(psx * TILE_SIZE + 6, psy * TILE_SIZE + 6, TILE_SIZE - 12, TILE_SIZE - 12);
-            
-            // Draw visual blue aura rings if magical shield is active
-            if (playerState.shieldStacks > 0) {
-                ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2;
-                ctx.strokeRect(psx * TILE_SIZE + 2, psy * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-            }
+            // 3. Draw Player
+            let psx = playerPos.x - camX; let psy = playerPos.y - camY;
+            ctx.fillStyle = "#fbbf24"; ctx.fillRect(psx * TILE_SIZE + 6, psy * TILE_SIZE + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+            if (playerState.shieldStacks > 0) { ctx.strokeStyle = "#38bdf8"; ctx.lineWidth = 2; ctx.strokeRect(psx * TILE_SIZE + 2, psy * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
 
-            // 5. Draw Tactical Flashing Reticle in Examine Window State
+            // 4. Draw Examine Target Box
             if (gameState === "EXAMINE") {
-                let esx = examineCursor.x - camX;
-                let esy = examineCursor.y - camY;
+                let esx = examineCursor.x - camX; let esy = examineCursor.y - camY;
                 if (esx >= 0 && esx < VIEW_WIDTH && esy >= 0 && esy < VIEW_HEIGHT) {
-                    ctx.strokeStyle = (Math.floor(Date.now() / 200) % 2 === 0) ? '#fbbf24' : '#ef4444';
-                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = (Math.floor(Date.now() / 200) % 2 === 0) ? '#fbbf24' : '#ef4444'; ctx.lineWidth = 3;
                     ctx.strokeRect(esx * TILE_SIZE + 1, esy * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
                 }
             }
 
-            // 6. Draw Text Ticks Engine Update
+            // 5. Draw Visual Floating Damage Texts
             ctx.font = "bold 13px Courier New";
-            floatingTexts.forEach((t, idx) => {
-                ctx.fillStyle = t.color;
-                ctx.fillText(t.text, t.x - (camX * TILE_SIZE), t.y - (camY * TILE_SIZE));
+            floatingTexts.forEach((t) => {
+                ctx.fillStyle = t.color; ctx.fillText(t.text, t.x - (camX * TILE_SIZE), t.y - (camY * TILE_SIZE));
                 t.y -= 0.6; t.timer--;
             });
             floatingTexts = floatingTexts.filter(t => t.timer > 0);
@@ -904,132 +734,68 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // --- INTERFACE CANVAS INPUT MANAGEMENT HANDLERS ---
         window.addEventListener('keydown', (e) => {
             if (gameState === "DEAD") return;
 
-            // Toggle Examine State Window Interceptor
             if (e.key === 'x' || e.key === 'X') {
                 if (gameState === "PLAYING") {
-                    gameState = "EXAMINE";
-                    examineCursor.x = playerPos.x; examineCursor.y = playerPos.y;
-                    document.getElementById('log').innerText = "🔎 EXAMINE MODE: Move around using WASD/Arrows. Press [X] or [Esc] to return.";
-                } else {
-                    gameState = "PLAYING"; document.getElementById('log').innerText = "Returned to exploration fields.";
-                }
+                    gameState = "EXAMINE"; examineCursor.x = playerPos.x; examineCursor.y = playerPos.y;
+                    document.getElementById('log').innerText = "🔎 EXAMINE MODE: Look at visible room tiles using WASD/Arrows.";
+                } else { gameState = "PLAYING"; }
                 updateUI(); return;
             }
 
             if (gameState === "EXAMINE") {
-                if (e.key === 'Escape') { gameState = "PLAYING"; document.getElementById('log').innerText = "Returned to exploration fields."; }
-                else { processExamineStep(e.key); }
-                return;
+                if (e.key === 'Escape') gameState = "PLAYING";
+                else processExamineStep(e.key); return;
             }
 
-            // Standard Navigation Input Actions
             if (e.key === 'w' || e.key === 'ArrowUp')    handlePlayerAction(0, -1);
             if (e.key === 's' || e.key === 'ArrowDown')  handlePlayerAction(0, 1);
             if (e.key === 'a' || e.key === 'ArrowLeft')  handlePlayerAction(-1, 0);
             if (e.key === 'd' || e.key === 'ArrowRight') handlePlayerAction(1, 0);
-
-            // Open/Close Inventory Window Overlay
             if (e.key === 'i' || e.key === 'I') toggleInventory();
-            if (e.key === 'Escape') document.getElementById('inv-modal').style.display = 'none';
 
-            // Descent Verification Hook Handler
-            if (e.key === 'Enter') {
-                if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
-                    let isBossFloor = (playerState.dungeonFloor % 10 === 0);
-                    if (isBossFloor && !playerState.hasBossKey) {
-                        document.getElementById('log').innerHTML = "❌ <span class='danger'>Staircase gate locked! Destroy the tier guardian boss to claim the exit key.</span>";
-                        spawnText(playerPos.x, playerPos.y, "LOCKED", '#ef4444');
-                    } else {
-                        playerState.dungeonFloor++;
-                        if (playerState.dungeonFloor > playerState.highestReachedFloor) {
-                            playerState.highestReachedFloor = playerState.dungeonFloor;
-                        }
-                        // Clear active buffs on transition
-                        playerState.floorBoosts.dmg = 0;
-                        playerState.floorBoosts.def = 0;
-                        
-                        saveGameCheckpoint();
-                        generateMap();
-                        document.getElementById('log').innerText = `Descended safely to Floor ${playerState.dungeonFloor}. Checkpoint saved!`;
-                    }
+            if (e.key === 'Enter' && gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
+                if (playerState.dungeonFloor % 10 === 0 && !playerState.hasBossKey) {
+                    document.getElementById('log').innerHTML = "❌ <span class='danger'>Defeat the room's Gatekeeper boss to get the stairs key!</span>";
+                } else {
+                    playerState.dungeonFloor++; playerState.floorBoosts.dmg = 0; playerState.floorBoosts.def = 0;
+                    generateMap();
                 }
             }
 
-            // Pick Up Items Ground Action Hook
-            if (e.key === 'g' || e.key === 'G') {
-                let idx = groundItems.findIndex(i => i.x === playerPos.x && i.y === playerPos.y);
-                if (idx !== -1) {
-                    if (playerState.inventory.length >= 10) {
-                        document.getElementById('log').innerText = "🎒 Inventory full!";
-                        return;
-                    }
-                    let item = groundItems.splice(idx, 1)[0];
-                    playerState.inventory.push(item);
-                    document.getElementById('log').innerHTML = `Picked up: <span style='color:${RARITY_COLORS[item.rarity]};'>${item.name}</span>`;
-                    updateUI();
-                }
-            }
-
-            // Intercept Number Triggers for Spellcasting Engine Loops
-            if ((e.key >= '0' && e.key <= '9') || e.key === '-') {
-                castSpell(e.key);
-            }
+            if ((e.key >= '0' && e.key <= '9') || e.key === '-') castSpell(e.key);
         });
 
-        // --- INVENTORY MANAGEMENT SCREEN INTERACTIVE SUBSYSTEM ---
         function toggleInventory() {
             let modal = document.getElementById('inv-modal');
             if (modal.style.display === 'flex') { modal.style.display = 'none'; return; }
             modal.style.display = 'flex';
-
-            let list = document.getElementById('inv-list');
-            list.innerHTML = "";
-
+            let list = document.getElementById('inv-list'); list.innerHTML = "";
             if (playerState.inventory.length === 0) { list.innerText = "Bag is completely empty."; return; }
 
             playerState.inventory.forEach((item, idx) => {
                 let div = document.createElement('div');
                 div.style.background = "#374151"; div.style.padding = "8px"; div.style.borderRadius = "4px";
                 div.style.borderLeft = `4px solid ${RARITY_COLORS[item.rarity]}`;
-
-                let title = `<div style='font-weight:bold; color:${RARITY_COLORS[item.rarity]};'>${item.name} (${item.type})</div>`;
-                let desc = `<div style='font-size:11px; color:#d1d5db; margin:2px 0;'>${item.desc || ""}</div>`;
-                
-                let btnLabel = item.type === "consumable" ? "Consume" : "Equip Piece";
-                let actionBtn = `<button class='btn' style='padding:2px 6px; font-size:11px; margin-top:4px;' onclick='executeInventoryAction(${idx})'>${btnLabel}</button>`;
-
-                div.innerHTML = title + desc + actionBtn;
+                div.innerHTML = `<div style='font-weight:bold; color:${RARITY_COLORS[item.rarity]};'>${item.name}</div>
+                                 <div style='font-size:11px; color:#d1d5db;'>${item.desc || ""}</div>
+                                 <button class='btn' style='padding:2px 6px; font-size:11px; margin-top:4px;' onclick='executeInventoryAction(${idx})'>Use</button>`;
                 list.appendChild(div);
             });
         }
 
         function executeInventoryAction(idx) {
             let item = playerState.inventory[idx];
-            if (item.type === "consumable") {
-                playerState.inventory.splice(idx, 1);
-                item.use(playerState);
-                document.getElementById('log').innerText = `Consumed item effect: ${item.name}`;
-            } else if (item.type === "weapon") {
-                let old = playerState.equipment.weapon;
-                playerState.equipment.weapon = item.name;
-                playerState.inventory.splice(idx, 1);
-                if (old) playerState.inventory.push({ name: old, ...ITEM_DB[old] });
-            } else if (item.type === "shield") {
-                let old = playerState.equipment.shield;
-                playerState.equipment.shield = item.name;
-                playerState.inventory.splice(idx, 1);
-                if (old) playerState.inventory.push({ name: old, ...ITEM_DB[old] });
-            }
-            recalculateSecondaryStats();
-            toggleInventory(); toggleInventory(); // Refresh panel context view state
-            updateUI();
+            if (item.type === "consumable") { playerState.inventory.splice(idx, 1); item.use(playerState); }
+            else if (item.type === "weapon") { let old = playerState.equipment.weapon; playerState.equipment.weapon = item.name; playerState.inventory.splice(idx, 1); if (old) playerState.inventory.push({ name: old, ...ITEM_DB[old] }); }
+            else if (item.type === "shield") { let old = playerState.equipment.shield; playerState.equipment.shield = item.name; playerState.inventory.splice(idx, 1); if (old) playerState.inventory.push({ name: old, ...ITEM_DB[old] }); }
+            recalculateSecondaryStats(); toggleInventory(); updateUI();
         }
 
-        // --- INTERFACE HUD DYNAMIC UPDATE CALLS ---
+        function spawnText(x, y, text, color) { floatingTexts.push({ x: x * TILE_SIZE + 8, y: y * TILE_SIZE, text, color, timer: 35 }); }
+
         function updateUI() {
             document.getElementById('txt-floor').innerText = `Floor ${playerState.dungeonFloor}`;
             document.getElementById('txt-hp').innerText = `${playerState.hp}/${playerState.maxHp}`;
@@ -1037,47 +803,25 @@
             document.getElementById('txt-level').innerText = playerState.level;
             document.getElementById('txt-exp').innerText = `${playerState.exp}/${playerState.maxExp}`;
             document.getElementById('txt-gold').innerText = playerState.gold;
-
             document.getElementById('txt-str').innerText = playerState.stats.str;
             document.getElementById('txt-int').innerText = playerState.stats.int;
             document.getElementById('txt-wis').innerText = playerState.stats.wis;
 
             let wpn = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
-            document.getElementById('txt-wpn').innerHTML = wpn ? `<span style='color:${RARITY_COLORS[wpn.rarity]};'>${playerState.equipment.weapon} (+${wpn.bonusDmg} Dmg)</span>` : "None (+0)";
-
+            document.getElementById('txt-wpn').innerHTML = wpn ? `<span style='color:${RARITY_COLORS[wpn.rarity]};'>${playerState.equipment.weapon}</span>` : "None";
             let shd = playerState.equipment.shield ? ITEM_DB[playerState.equipment.shield] : null;
-            document.getElementById('txt-shd').innerHTML = shd ? `<span style='color:${RARITY_COLORS[shd.rarity]};'>${playerState.equipment.shield} (+${shd.bonusDef} Def)</span>` : "None (+0)";
+            document.getElementById('txt-shd').innerHTML = shd ? `<span style='color:${RARITY_COLORS[shd.rarity]};'>${playerState.equipment.shield}</span>` : "None";
 
-            // Handle Skill Point allocations visibility toggling display indicators
             let btns = document.querySelectorAll('.btn-stat');
             if (playerState.statPoints > 0) {
-                document.getElementById('txt-points').style.display = "block";
-                document.getElementById('txt-points').innerText = `${playerState.statPoints} Points Available!`;
-                btns.forEach(b => b.style.display = "inline-block");
+                document.getElementById('txt-points').style.display = "block"; btns.forEach(b => b.style.display = "inline-block");
             } else {
-                document.getElementById('txt-points').style.display = "none";
-                btns.forEach(b => b.style.display = "none");
-            }
-
-            // Render Active temporary floor modifiers buffs
-            let buffStr = "";
-            if (playerState.floorBoosts.dmg > 0) buffStr += `💪 Floor ATK: +${playerState.floorBoosts.dmg} `;
-            if (playerState.floorBoosts.def > 0) buffStr += `🛡️ Floor DEF: +${playerState.floorBoosts.def} `;
-            if (playerState.shieldStacks > 0) buffStr += `✨ Shield Blocks: ${playerState.shieldStacks}`;
-            document.getElementById('txt-active-buffs').innerText = buffStr;
-        }
-
-        function upgradeStat(statName) {
-            if (playerState.statPoints > 0) {
-                playerState.statPoints--;
-                playerState.stats[statName]++;
-                recalculateSecondaryStats();
-                updateUI();
+                document.getElementById('txt-points').style.display = "none"; btns.forEach(b => b.style.display = "none");
             }
         }
 
-        // --- ENGINE STARTUP INTERACTION RUNNERS ---
-        loadGameCheckpoint();
+        function upgradeStat(statName) { if (playerState.statPoints > 0) { playerState.statPoints--; playerState.stats[statName]++; recalculateSecondaryStats(); updateUI(); } }
+
         generateMap();
         gameLoop();
     </script>
