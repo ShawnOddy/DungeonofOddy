@@ -3,107 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Advanced Stats & Combat</title>
+    <title>Dungeon Engine - Inventory & Equipment</title>
     <style>
         body {
-            background-color: #1e1e2f;
-            color: #c8c8d0;
+            background-color: #1e1e2f; color: #c8c8d0;
             font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px; margin: 0;
         }
         h1 { color: #ffffff; }
         .container {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
+            display: flex; gap: 20px; flex-wrap: wrap;
+            justify-content: center; align-items: flex-start;
         }
         .panel {
-            background-color: #2a2a3b;
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #3b3b4f;
+            background-color: #2a2a3b; padding: 15px;
+            border-radius: 8px; border: 2px solid #3b3b4f;
+            position: relative; /* Needed for inventory overlay */
         }
         .stats-panel {
-            width: 300px;
-            background-color: #1a1a24;
-            border-color: #10b981;
+            width: 300px; background-color: #1a1a24; border-color: #10b981;
         }
         .stats-panel h3 {
-            margin-top: 0;
-            color: #10b981;
-            border-bottom: 1px solid #3b3b4f;
-            padding-bottom: 5px;
-            font-size: 1.1em;
+            margin-top: 0; color: #10b981; border-bottom: 1px solid #3b3b4f;
+            padding-bottom: 5px; font-size: 1.1em;
         }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            font-weight: bold;
-        }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold; }
         .stat-value { color: #ffffff; }
+        .bonus { color: #10b981; font-weight: bold; }
         .danger { color: #ef4444 !important; }
         .magic { color: #60a5fa !important; }
         .attr-box {
-            background-color: #1e1e2f;
-            padding: 8px;
-            border-radius: 4px;
-            margin-top: 10px;
-            border: 1px solid #3b3b4f;
-            font-size: 0.85em;
+            background-color: #1e1e2f; padding: 8px; border-radius: 4px;
+            margin-top: 10px; border: 1px solid #3b3b4f; font-size: 0.85em;
         }
         .attr-detail { color: #9ca3af; font-size: 0.9em; font-weight: normal; }
-        ul {
-            list-style-type: square;
-            padding-left: 20px;
-            color: #fbbf24;
-            margin-top: 5px;
-        }
-        canvas {
-            background-color: #000;
-            image-rendering: pixelated; 
-        }
-        #studioCanvas {
-            flex-shrink: 0;
-            object-fit: contain;
-            cursor: crosshair;
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-            max-width: 256px;
-        }
+        
+        canvas { background-color: #000; image-rendering: pixelated; }
+        #studioCanvas { flex-shrink: 0; object-fit: contain; cursor: crosshair; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; max-width: 256px; }
         button {
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
+            background-color: #3b82f6; color: white; border: none;
+            padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;
         }
         button:hover { background-color: #2563eb; }
         button.active { background-color: #10b981; }
-        #log {
-            margin-top: 20px;
-            color: #10b981;
-            font-weight: bold;
-            min-height: 1.5em;
+        
+        #log { margin-top: 20px; color: #10b981; font-weight: bold; min-height: 1.5em; }
+        .instructions { margin-top: 10px; font-size: 0.85em; color: #9ca3af; text-align: center; }
+
+        /* Inventory UI Overlay */
+        #inv-modal {
+            position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
+            background-color: rgba(26, 26, 36, 0.95); border: 2px solid #3b82f6;
+            border-radius: 8px; padding: 20px; display: none; overflow-y: auto; z-index: 100;
         }
-        .instructions {
-            margin-top: 10px;
-            font-size: 0.85em;
-            color: #9ca3af;
-            text-align: center;
+        #inv-modal h2 { margin-top: 0; color: #3b82f6; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
+        .inv-row {
+            display: flex; justify-content: space-between; background: #1e1e2f;
+            padding: 10px; border-radius: 4px; border: 1px solid #3b3b4f;
+            align-items: center; margin-bottom: 8px;
         }
+        .inv-info strong { color: #fbbf24; }
+        .inv-info span { font-size: 0.85em; color: #9ca3af; display: block; margin-top: 4px; }
+        .inv-actions button { padding: 4px 8px; font-size: 0.85em; margin-left: 5px; }
+        .btn-use { background-color: #10b981; } .btn-use:hover { background-color: #059669; }
+        .btn-drop { background-color: #ef4444; } .btn-drop:hover { background-color: #dc2626; }
+        .btn-unequip { background-color: #f59e0b; } .btn-unequip:hover { background-color: #d97706; }
     </style>
 </head>
 <body>
@@ -111,25 +78,12 @@
     <h1>Dungeon Engine</h1>
 
     <div class="container">
-        
         <div class="panel stats-panel">
             <h3>Hero Status</h3>
-            <div class="stat-row">
-                <span>Floor:</span>
-                <span class="stat-value" id="ui-level">1</span>
-            </div>
-            <div class="stat-row">
-                <span>HP:</span>
-                <span class="stat-value" id="ui-hp">20 / 20</span>
-            </div>
-            <div class="stat-row">
-                <span>MP:</span>
-                <span class="stat-value magic" id="ui-mp">20 / 20</span>
-            </div>
-            <div class="stat-row">
-                <span>Gold:</span>
-                <span class="stat-value" id="ui-gold">0</span>
-            </div>
+            <div class="stat-row"><span>Floor:</span><span class="stat-value" id="ui-level">1</span></div>
+            <div class="stat-row"><span>HP:</span><span class="stat-value" id="ui-hp">20 / 20</span></div>
+            <div class="stat-row"><span>MP:</span><span class="stat-value magic" id="ui-mp">20 / 20</span></div>
+            <div class="stat-row"><span>Gold:</span><span class="stat-value" id="ui-gold">0</span></div>
 
             <div class="attr-box">
                 <div class="stat-row"><span>STR:</span><span id="ui-str" class="stat-value"></span></div>
@@ -139,77 +93,82 @@
                 <div class="stat-row"><span>WIS:</span><span id="ui-wis" class="stat-value"></span></div>
             </div>
             
-            <h3 style="margin-top: 15px;">Inventory</h3>
-            <ul id="ui-inventory">
-                <li style="color: #c8c8d0;">Empty</li>
-            </ul>
+            <h3 style="margin-top: 15px;">Bag Space (<span id="ui-bag-count">0</span> / <span id="ui-bag-max">0</span>)</h3>
+            <div style="font-size: 0.85em; color: #9ca3af; text-align: center;">Press 'I' to manage items</div>
         </div>
 
         <div class="panel">
             <canvas id="gameCanvas" width="576" height="576"></canvas>
+            
+            <div id="inv-modal">
+                <h2>Equipped</h2>
+                <div id="inv-equipped-list"></div>
+                
+                <h2 style="margin-top: 20px;">Backpack</h2>
+                <div id="inv-bag-list"></div>
+                
+                <p style="text-align: center; margin-top: 20px;"><button onclick="toggleInventory()">Close (I)</button></p>
+            </div>
+
             <div id="log">Welcome to the dungeon...</div>
-            <div class="instructions">Arrows/WASD to Move | Enter for Stairs<br>'H' to Heal (5 MP) | 'F' for Arcane Blast (3 MP)</div>
+            <div class="instructions">Arrows/WASD Move | Enter for Stairs | 'I' for Inventory<br>'H' to Heal (5 MP) | 'F' for Arcane Blast (3 MP)</div>
         </div>
 
         <div class="panel">
             <h3>Alignment Studio</h3>
             <canvas id="studioCanvas" width="256" height="256"></canvas>
-            
             <div class="controls" id="mapper-controls">
                 <button onclick="setTarget('WALL', this)">Wall</button>
                 <button onclick="setTarget('FLOOR', this)">Floor</button>
-                <button onclick="setTarget('DOOR_CLOSED', this)">Door (C)</button>
-                <button onclick="setTarget('DOOR_OPEN', this)">Door (O)</button>
-                <button onclick="setTarget('DOOR_BROKEN', this)">Door (B)</button>
                 <button onclick="setTarget('STAIRS_UP', this)">Stairs Up</button>
                 <button onclick="setTarget('STAIRS_DOWN', this)">Stairs Dn</button>
-                <button onclick="setTarget('CHEST_CLOSED', this)">Chest (C)</button>
-                <button onclick="setTarget('CHEST_OPEN', this)">Chest (O)</button>
+                <button onclick="setTarget('CHEST_CLOSED', this)">Chest</button>
                 <button onclick="setTarget('HERO', this)">Hero</button>
                 <button onclick="setTarget('GOBLIN', this)">Goblin</button>
                 <button onclick="setTarget('BAT', this)">Bat</button>
-                <button onclick="setTarget('TRAP', this)">Trap</button>
             </div>
         </div>
     </div>
 
 <script>
-// --- 1. CONSTANTS & DICTIONARIES ---
-const SHEET_GRID = 32;   
-const GAME_TILE = 32;    
-const MAP_WIDTH = 18; 
-const MAP_HEIGHT = 18;
+// --- 1. CONSTANTS, ITEMS & DICTIONARIES ---
+const SHEET_GRID = 32; const GAME_TILE = 32; const MAP_WIDTH = 18; const MAP_HEIGHT = 18;
 
 const TILE = { 
-    WALL: 0, FLOOR: 1, 
-    DOOR_CLOSED: 2, DOOR_OPEN: 3, DOOR_BROKEN: 4,
-    STAIRS_UP: 5, STAIRS_DOWN: 6,
-    CHEST_CLOSED: 7, CHEST_OPEN: 8,
+    WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, DOOR_OPEN: 3, DOOR_BROKEN: 4,
+    STAIRS_UP: 5, STAIRS_DOWN: 6, CHEST_CLOSED: 7, CHEST_OPEN: 8,
     GOBLIN: 9, BAT: 10, TRAP: 11
 };
 
 let SPRITE_MAP = {
-    WALL:         { col: 0, row: 0 }, FLOOR:        { col: 1, row: 0 }, 
-    STAIRS_UP:    { col: 2, row: 0 }, STAIRS_DOWN:  { col: 3, row: 0 },
-    DOOR_CLOSED:  { col: 0, row: 1 }, DOOR_OPEN:    { col: 1, row: 1 },
-    DOOR_BROKEN:  { col: 2, row: 1 }, CHEST_CLOSED: { col: 3, row: 1 },
-    CHEST_OPEN:   { col: 0, row: 2 }, HERO:         { col: 1, row: 2 }, 
-    GOBLIN:       { col: 2, row: 2 }, BAT:          { col: 3, row: 2 },
-    TRAP:         { col: 0, row: 3 }
+    WALL: { col: 0, row: 0 }, FLOOR: { col: 1, row: 0 }, 
+    STAIRS_UP: { col: 2, row: 0 }, STAIRS_DOWN: { col: 3, row: 0 },
+    CHEST_CLOSED: { col: 3, row: 1 }, CHEST_OPEN: { col: 0, row: 2 }, 
+    HERO: { col: 1, row: 2 }, GOBLIN: { col: 2, row: 2 }, BAT: { col: 3, row: 2 },
+    TRAP: { col: 0, row: 3 }
 };
 
-// --- RPG STATE VARIABLES ---
+// Item Database defining properties and effects
+const ITEM_DB = {
+    "Health Potion": { type: "consumable", desc: "Restores 20 HP", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
+    "Mana Potion": { type: "consumable", desc: "Restores 10 MP", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 10); } },
+    "Iron Dagger": { type: "weapon", bonusDmg: 2, desc: "+2 Damage" },
+    "Steel Sword": { type: "weapon", bonusDmg: 5, desc: "+5 Damage" },
+    "Leather Armor": { type: "armor", bonusDef: 2, desc: "+2 Defense" },
+    "Chainmail": { type: "armor", bonusDef: 5, desc: "+5 Defense" },
+    "Tome of Knowledge": { type: "consumable", desc: "+1 INT & Restores MP", use: (p) => { p.stats.int++; p.maxMp = p.stats.int * 2; p.mp = p.maxMp; } }
+};
+const LOOT_TABLE = Object.keys(ITEM_DB);
+
+// --- 2. STATE VARIABLES ---
+let gameState = "PLAYING"; // "PLAYING" or "INVENTORY"
+
 let playerState = {
-    stats: {
-        str: 12, // Dmg & Carry Weight
-        dex: 10, // Crit Chance & Trap Sight
-        con: 14, // Max HP & Defense
-        int: 16, // Max MP & Magic Dmg
-        wis: 15  // Regen & Heal Power
-    },
-    hp: 0, maxHp: 0,
-    mp: 0, maxMp: 0,
-    gold: 0, inventory: [], level: 1
+    stats: { str: 12, dex: 10, con: 14, int: 16, wis: 15 },
+    hp: 0, maxHp: 0, mp: 0, maxMp: 0,
+    gold: 0, level: 1,
+    inventory: [], // Array of item name strings
+    equipment: { weapon: null, armor: null }
 };
 
 playerState.maxHp = playerState.stats.con * 2;
@@ -217,170 +176,278 @@ playerState.hp = playerState.maxHp;
 playerState.maxMp = playerState.stats.int * 2;
 playerState.mp = playerState.maxMp;
 
-const LOOT_TABLE = ["Health Potion", "Iron Dagger", "Leather Boots", "Mystery Scroll"];
-
 let gameMap = [];
+let enemies = [];      
+let floatTexts = [];   
 let playerPos = { x: 2, y: 2 }; 
-let currentMappingTarget = null;
-let activeBtn = null;
 
-// --- 2. CANVAS SETUP ---
-const gCanvas = document.getElementById('gameCanvas');
-const gCtx = gCanvas.getContext('2d');
-const sCanvas = document.getElementById('studioCanvas');
-const sCtx = sCanvas.getContext('2d');
+let currentMappingTarget = null; let activeBtn = null;
+
+// --- 3. CANVAS SETUP ---
+const gCanvas = document.getElementById('gameCanvas'); const gCtx = gCanvas.getContext('2d');
+const sCanvas = document.getElementById('studioCanvas'); const sCtx = sCanvas.getContext('2d');
 const spriteSheet = new Image();
 
-function drawTile(ctx, col, row, drawFunction) {
-    ctx.save();
-    ctx.translate(col * 32, row * 32);
-    drawFunction(ctx);
-    ctx.restore();
-}
-
+function drawTile(ctx, col, row, drawFunction) { ctx.save(); ctx.translate(col * 32, row * 32); drawFunction(ctx); ctx.restore(); }
 function generateInternalSpriteSheet() {
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = 128; tempCanvas.height = 128; 
-    const ctx = tempCanvas.getContext('2d');
-
-    // Rows 1 - 3
+    const tempCanvas = document.createElement('canvas'); tempCanvas.width = 128; tempCanvas.height = 128; const ctx = tempCanvas.getContext('2d');
     drawTile(ctx, 0, 0, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#1f2937'; c.fillRect(0, 14, 32, 2); c.fillRect(14, 0, 2, 14); c.fillRect(24, 16, 2, 16); });
     drawTile(ctx, 1, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#27272a'; c.fillRect(4, 4, 8, 8); c.fillRect(20, 18, 6, 6); });
     drawTile(ctx, 2, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#9ca3af'; c.fillRect(4, 16, 12, 16); c.fillRect(16, 4, 12, 28); });
     drawTile(ctx, 3, 0, c => { c.fillStyle = '#3f3f46'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 24); c.fillStyle = '#4b5563'; c.fillRect(4, 4, 12, 8); c.fillRect(8, 12, 12, 8); });
-    drawTile(ctx, 0, 1, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#78350f'; c.fillRect(4, 4, 24, 28); c.fillStyle = '#fbbf24'; c.fillRect(22, 16, 4, 4); });
-    drawTile(ctx, 1, 1, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); c.fillStyle = '#78350f'; c.fillRect(0, 4, 6, 28); });
-    drawTile(ctx, 2, 1, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#000000'; c.fillRect(4, 4, 24, 28); c.fillStyle = '#78350f'; c.fillRect(4, 4, 6, 12); c.fillRect(20, 20, 8, 12); c.fillRect(18, 4, 10, 6); });
     drawTile(ctx, 3, 1, c => { c.fillStyle = '#b45309'; c.fillRect(4, 12, 24, 16); c.fillStyle = '#d97706'; c.fillRect(4, 12, 24, 4); c.fillStyle = '#fbbf24'; c.fillRect(14, 14, 4, 6); });
     drawTile(ctx, 0, 2, c => { c.fillStyle = '#b45309'; c.fillRect(4, 16, 24, 12); c.fillStyle = '#d97706'; c.fillRect(4, 4, 24, 4); c.fillStyle = '#fbbf24'; c.fillRect(8, 12, 16, 4); c.fillStyle = '#60a5fa'; c.fillRect(12, 10, 4, 4); });
     drawTile(ctx, 1, 2, c => { c.fillStyle = '#2563eb'; c.fillRect(8, 8, 16, 20); c.fillStyle = '#fca5a5'; c.fillRect(10, 10, 12, 8); c.fillStyle = '#94a3b8'; c.fillRect(24, 12, 4, 12); });
     drawTile(ctx, 2, 2, c => { c.fillStyle = '#16a34a'; c.fillRect(8, 12, 16, 16); c.fillStyle = '#ef4444'; c.fillRect(10, 14, 4, 4); c.fillRect(18, 14, 4, 4); c.fillStyle = '#78350f'; c.fillRect(4, 10, 4, 16); });
     drawTile(ctx, 3, 2, c => { c.fillStyle = '#581c87'; c.fillRect(12, 12, 8, 8); c.fillStyle = '#000000'; c.beginPath(); c.moveTo(12,14); c.lineTo(2,8); c.lineTo(6,18); c.fill(); c.beginPath(); c.moveTo(20,14); c.lineTo(30,8); c.lineTo(26,18); c.fill(); c.fillStyle = '#ef4444'; c.fillRect(14, 14, 2, 2); c.fillRect(18, 14, 2, 2); });
-
-    // Row 4 (Traps)
-    drawTile(ctx, 0, 3, c => { 
-        c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); 
-        c.fillStyle = '#111827'; c.fillRect(8, 8, 16, 16); 
-        c.fillStyle = '#9ca3af'; 
-        c.beginPath(); c.moveTo(16,4); c.lineTo(12,12); c.lineTo(20,12); c.fill(); 
-        c.beginPath(); c.moveTo(16,28); c.lineTo(12,20); c.lineTo(20,20); c.fill();
-    });
-
+    drawTile(ctx, 0, 3, c => { c.fillStyle = '#4b5563'; c.fillRect(0, 0, 32, 32); c.fillStyle = '#111827'; c.fillRect(8, 8, 16, 16); c.fillStyle = '#9ca3af'; c.beginPath(); c.moveTo(16,4); c.lineTo(12,12); c.lineTo(20,12); c.fill(); c.beginPath(); c.moveTo(16,28); c.lineTo(12,20); c.lineTo(20,20); c.fill(); });
     spriteSheet.src = tempCanvas.toDataURL("image/png");
 }
 
-// --- 4. INITIALIZATION ---
 spriteSheet.onload = () => {
-    gCtx.imageSmoothingEnabled = false;
-    sCtx.imageSmoothingEnabled = false;
-    generateMap();
-    updateUI(); 
-    drawScene();
+    gCtx.imageSmoothingEnabled = false; sCtx.imageSmoothingEnabled = false;
+    generateMap(); updateUI(); requestAnimationFrame(gameLoop);
 };
 generateInternalSpriteSheet();
 
-// --- 5. UI UPDATER ---
+// --- 4. UI & INVENTORY UPDATER ---
+function getEquipBonus(statType) {
+    let wep = playerState.equipment.weapon ? ITEM_DB[playerState.equipment.weapon] : null;
+    let arm = playerState.equipment.armor ? ITEM_DB[playerState.equipment.armor] : null;
+    if (statType === 'dmg') return wep ? wep.bonusDmg : 0;
+    if (statType === 'def') return arm ? arm.bonusDef : 0;
+    return 0;
+}
+
 function updateUI() {
     document.getElementById('ui-level').innerText = playerState.level;
-    
     let hpElement = document.getElementById('ui-hp');
     hpElement.innerText = `${playerState.hp} / ${playerState.maxHp}`;
     if (playerState.hp <= playerState.maxHp * 0.25) hpElement.classList.add('danger');
     else hpElement.classList.remove('danger');
-
     document.getElementById('ui-mp').innerText = `${playerState.mp} / ${playerState.maxMp}`;
     document.getElementById('ui-gold').innerText = playerState.gold;
 
-    // Derived Math Logic
-    let dmg = 1 + Math.floor(playerState.stats.str / 4);
-    let cap = playerState.stats.str;
+    let wepBonus = getEquipBonus('dmg');
+    let armBonus = getEquipBonus('def');
+
+    let baseDmg = 1 + Math.floor(playerState.stats.str / 4);
+    let totalDmg = baseDmg + wepBonus;
+    let baseDef = Math.floor(playerState.stats.con / 5);
+    let totalDef = baseDef + armBonus;
     let crit = playerState.stats.dex; 
-    let def = Math.floor(playerState.stats.con / 5);
     let mdmg = 2 + Math.floor(playerState.stats.int / 3);
     let regen = Math.floor(playerState.stats.wis * 1.5);
 
-    document.getElementById('ui-str').innerHTML = `${playerState.stats.str} <span class="attr-detail">(Dmg:+${dmg} Cap:${cap})</span>`;
+    let dmgStr = `Dmg:${totalDmg}` + (wepBonus > 0 ? ` <span class="bonus">(+${wepBonus})</span>` : "");
+    let defStr = `Def:${totalDef}` + (armBonus > 0 ? ` <span class="bonus">(+${armBonus})</span>` : "");
+
+    document.getElementById('ui-str').innerHTML = `${playerState.stats.str} <span class="attr-detail">(${dmgStr})</span>`;
     document.getElementById('ui-dex').innerHTML = `${playerState.stats.dex} <span class="attr-detail">(Crit:${crit}%)</span>`;
-    document.getElementById('ui-con').innerHTML = `${playerState.stats.con} <span class="attr-detail">(Def:${def})</span>`;
+    document.getElementById('ui-con').innerHTML = `${playerState.stats.con} <span class="attr-detail">(${defStr})</span>`;
     document.getElementById('ui-int').innerHTML = `${playerState.stats.int} <span class="attr-detail">(Mag Dmg:${mdmg})</span>`;
     document.getElementById('ui-wis').innerHTML = `${playerState.stats.wis} <span class="attr-detail">(Regen:${regen}%)</span>`;
 
-    const invList = document.getElementById('ui-inventory');
-    if (playerState.inventory.length === 0) {
-        invList.innerHTML = '<li style="color: #c8c8d0;">Empty</li>';
+    document.getElementById('ui-bag-count').innerText = playerState.inventory.length;
+    document.getElementById('ui-bag-max').innerText = playerState.stats.str;
+}
+
+function toggleInventory() {
+    const modal = document.getElementById('inv-modal');
+    if (gameState === "PLAYING") {
+        gameState = "INVENTORY";
+        renderInventoryList();
+        modal.style.display = 'block';
     } else {
-        invList.innerHTML = playerState.inventory.map(item => `<li>${item}</li>`).join('');
+        gameState = "PLAYING";
+        modal.style.display = 'none';
     }
 }
 
-// --- 6. CORE GAMEPLAY LOGIC ---
-window.addEventListener('keydown', (e) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F'].includes(e.key)) {
-        e.preventDefault();
+function renderInventoryList() {
+    const eqList = document.getElementById('inv-equipped-list');
+    const bgList = document.getElementById('inv-bag-list');
+    eqList.innerHTML = ''; bgList.innerHTML = '';
+
+    // Render Equipment
+    ['weapon', 'armor'].forEach(slot => {
+        let itemName = playerState.equipment[slot];
+        if (itemName) {
+            let item = ITEM_DB[itemName];
+            eqList.innerHTML += `
+                <div class="inv-row">
+                    <div class="inv-info"><strong>[${slot.toUpperCase()}] ${itemName}</strong><span>${item.desc}</span></div>
+                    <div class="inv-actions"><button class="btn-unequip" onclick="unequipItem('${slot}')">Unequip</button></div>
+                </div>`;
+        } else {
+            eqList.innerHTML += `<div class="inv-row"><div class="inv-info" style="color:#6b7280;">[${slot.toUpperCase()}] Empty</div></div>`;
+        }
+    });
+
+    // Render Bag
+    if (playerState.inventory.length === 0) {
+        bgList.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Bag is empty.</div>';
+    } else {
+        playerState.inventory.forEach((itemName, index) => {
+            let item = ITEM_DB[itemName];
+            let actionBtn = item.type === "consumable" 
+                ? `<button class="btn-use" onclick="useItem(${index})">Use</button>` 
+                : `<button class="btn-use" onclick="equipItem(${index})">Equip</button>`;
+            
+            bgList.innerHTML += `
+                <div class="inv-row">
+                    <div class="inv-info"><strong>${itemName}</strong><span>${item.desc}</span></div>
+                    <div class="inv-actions">
+                        ${actionBtn}
+                        <button class="btn-drop" onclick="dropItem(${index})">Drop</button>
+                    </div>
+                </div>`;
+        });
+    }
+}
+
+// Inventory Actions (These consume a turn)
+function useItem(index) {
+    let itemName = playerState.inventory[index];
+    ITEM_DB[itemName].use(playerState);
+    playerState.inventory.splice(index, 1);
+    document.getElementById('log').innerText = `🎒 Drank ${itemName}.`;
+    spawnText(playerPos.x, playerPos.y, `Used Item!`, '#10b981');
+    finishMenuAction();
+}
+
+function equipItem(index) {
+    let itemName = playerState.inventory[index];
+    let item = ITEM_DB[itemName];
+    let currentEquip = playerState.equipment[item.type];
+    
+    playerState.equipment[item.type] = itemName;
+    playerState.inventory.splice(index, 1);
+    if (currentEquip) playerState.inventory.push(currentEquip); // Put old item in bag
+    
+    document.getElementById('log').innerText = `🎒 Equipped ${itemName}.`;
+    finishMenuAction();
+}
+
+function unequipItem(slot) {
+    if (playerState.inventory.length >= playerState.stats.str) {
+        alert("Bag is full! Cannot unequip."); return;
+    }
+    let itemName = playerState.equipment[slot];
+    playerState.inventory.push(itemName);
+    playerState.equipment[slot] = null;
+    document.getElementById('log').innerText = `🎒 Unequipped ${itemName}.`;
+    finishMenuAction();
+}
+
+function dropItem(index) {
+    let itemName = playerState.inventory[index];
+    playerState.inventory.splice(index, 1);
+    document.getElementById('log').innerText = `🎒 Dropped ${itemName}.`;
+    finishMenuAction();
+}
+
+function finishMenuAction() {
+    updateUI();
+    toggleInventory(); // Close menu
+    processTurn();     // Let enemies move
+}
+
+function spawnText(x, y, text, color) { floatTexts.push({ x: x, y: y, text: text, color: color, life: 40, offset: 0 }); }
+function isWalkable(x, y) {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return false;
+    let t = gameMap[y][x];
+    if (t === TILE.WALL || t === TILE.CHEST_CLOSED) return false;
+    if (playerPos.x === x && playerPos.y === y) return false;
+    if (enemies.some(e => e.x === x && e.y === y)) return false;
+    return true;
+}
+
+// --- 5. TURN LOGIC (AI & Combat) ---
+function processTurn() {
+    // Clear dead enemies
+    enemies = enemies.filter(en => {
+        if (en.hp <= 0) { document.getElementById('log').innerText = `💀 Slayed the ${en.name}!`; return false; }
+        return true;
+    });
+
+    let playerDef = Math.floor(playerState.stats.con / 5) + getEquipBonus('def');
+
+    enemies.forEach(en => {
+        let dx = playerPos.x - en.x; let dy = playerPos.y - en.y;
+        let dist = Math.abs(dx) + Math.abs(dy);
+
+        if (dist === 1) { // Attack
+            let dmg = Math.max(0, en.atk - playerDef);
+            playerState.hp -= dmg;
+            spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
+        } else if (dist < 6) { // Hunt Player
+            let nx = en.x + Math.sign(dx); let ny = en.y + Math.sign(dy);
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (isWalkable(nx, en.y)) en.x = nx; else if (isWalkable(en.x, ny)) en.y = ny;
+            } else {
+                if (isWalkable(en.x, ny)) en.y = ny; else if (isWalkable(nx, en.y)) en.x = nx;
+            }
+        }
+    });
+
+    if (playerState.hp <= 0) {
+        playerState.hp = 0;
+        document.getElementById('log').innerText = `💀 YOU HAVE PERISHED! GAME OVER.`;
     }
 
+    if (playerState.hp > 0 && Math.random() < (playerState.stats.wis * 0.015)) {
+        if (playerState.hp < playerState.maxHp) playerState.hp++;
+        if (playerState.mp < playerState.maxMp) playerState.mp++;
+    }
+    updateUI();
+}
+
+// --- 6. PLAYER INPUT ---
+window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F', 'i', 'I'].includes(e.key)) e.preventDefault();
     if (playerState.hp <= 0) return; 
+
+    // Inventory Toggle
+    if (e.key === 'i' || e.key === 'I') { toggleInventory(); return; }
+    
+    // Block all other inputs if inventory is open
+    if (gameState === "INVENTORY") return;
 
     let tookAction = false;
 
-    // SPELLCASTING: Heal (WIS)
     if (e.key === 'h' || e.key === 'H') {
         if (playerState.mp >= 5) {
             let healAmount = Math.floor(playerState.stats.wis / 1.5) + 2; 
             playerState.mp -= 5;
             playerState.hp = Math.min(playerState.maxHp, playerState.hp + healAmount);
-            document.getElementById('log').innerText = `✨ Cast Heal! Recovered ${healAmount} HP.`;
+            spawnText(playerPos.x, playerPos.y, `+${healAmount}`, '#10b981');
+            document.getElementById('log').innerText = `✨ Cast Heal!`;
             tookAction = true;
-        } else {
-            document.getElementById('log').innerText = `⚠️ Not enough MP to cast Heal! (Needs 5)`;
         }
     }
-
-    // SPELLCASTING: Arcane Blast (INT)
     else if (e.key === 'f' || e.key === 'F') {
         if (playerState.mp >= 3) {
             playerState.mp -= 3;
             let mdmg = 2 + Math.floor(playerState.stats.int / 3);
             let hitCount = 0;
-            
-            // Blast all 4 adjacent tiles
-            let adjs = [{x:0,y:-1}, {x:0,y:1}, {x:-1,y:0}, {x:1,y:0}];
-            adjs.forEach(dir => {
-                let tx = playerPos.x + dir.x;
-                let ty = playerPos.y + dir.y;
-                let t = gameMap[ty] ? gameMap[ty][tx] : null;
-                if (t === TILE.GOBLIN || t === TILE.BAT) {
-                    gameMap[ty][tx] = TILE.FLOOR; // Instant kill
-                    hitCount++;
-                }
+            enemies.forEach(en => {
+                let dist = Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y);
+                if (dist === 1) { en.hp -= mdmg; spawnText(en.x, en.y, `-${mdmg}`, '#60a5fa'); hitCount++; }
             });
-
-            if (hitCount > 0) {
-                document.getElementById('log').innerText = `🔥 Arcane Blast! Hit ${hitCount} enemy(s) for ${mdmg} magic damage.`;
-            } else {
-                document.getElementById('log').innerText = `🔥 Arcane Blast fizzled... no enemies nearby.`;
-            }
+            document.getElementById('log').innerText = hitCount > 0 ? `🔥 Arcane Blast hit ${hitCount} enemy(s)!` : `🔥 Arcane Blast fizzled...`;
             tookAction = true;
-        } else {
-            document.getElementById('log').innerText = `⚠️ Not enough MP to cast Arcane Blast! (Needs 3)`;
         }
     }
-
-    // STAIRS LOGIC
     else if (e.key === 'Enter') {
         if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
-            playerState.level++;
-            generateMap(); 
+            playerState.level++; generateMap(); 
             document.getElementById('log').innerText = `You descend to Floor ${playerState.level}...`;
             tookAction = true;
         }
     }
-
-    // MOVEMENT, COMBAT & INTERACTION LOGIC
     else {
-        let targetX = playerPos.x;
-        let targetY = playerPos.y;
-
+        let targetX = playerPos.x, targetY = playerPos.y;
         if (e.key === 'ArrowUp' || e.key === 'w') { targetY--; tookAction = true; }
         if (e.key === 'ArrowDown' || e.key === 's') { targetY++; tookAction = true; }
         if (e.key === 'ArrowLeft' || e.key === 'a') { targetX--; tookAction = true; }
@@ -388,200 +455,149 @@ window.addEventListener('keydown', (e) => {
 
         if (tookAction) {
             let targetTile = gameMap[targetY] ? gameMap[targetY][targetX] : null;
+            let targetEnemy = enemies.find(en => en.x === targetX && en.y === targetY);
             
-            if (targetTile !== null && targetTile !== TILE.WALL) {
-                if (targetTile === TILE.DOOR_CLOSED) {
-                    gameMap[targetY][targetX] = TILE.DOOR_OPEN;
-                    document.getElementById('log').innerText = "🚪 You opened the door.";
-                    
-                } else if (targetTile === TILE.CHEST_CLOSED) {
-                    
-                    // INVENTORY CARRY WEIGHT LIMIT (STR)
+            if (targetEnemy) { // Melee Combat
+                let baseDmg = 1 + Math.floor(playerState.stats.str / 4) + getEquipBonus('dmg');
+                let isCrit = (Math.random() * 100) < playerState.stats.dex;
+                let dealtDmg = isCrit ? baseDmg * 2 : baseDmg;
+                targetEnemy.hp -= dealtDmg;
+                spawnText(targetEnemy.x, targetEnemy.y, `-${dealtDmg}`, isCrit ? '#fbbf24' : '#ffffff');
+                document.getElementById('log').innerText = `⚔️ ${isCrit ? "CRIT! " : ""}Hit ${targetEnemy.name} for ${dealtDmg}.`;
+            } else if (targetTile !== null && targetTile !== TILE.WALL) {
+                if (targetTile === TILE.CHEST_CLOSED) {
                     if (playerState.inventory.length >= playerState.stats.str) {
-                        document.getElementById('log').innerText = `🎒 Overburdened! Need more STR to carry this loot.`;
+                        document.getElementById('log').innerText = `🎒 Overburdened! Bag is full.`; tookAction = false; 
                     } else {
                         gameMap[targetY][targetX] = TILE.CHEST_OPEN;
-                        let foundGold = Math.floor(Math.random() * 25) + 5;
                         let foundItem = LOOT_TABLE[Math.floor(Math.random() * LOOT_TABLE.length)];
-                        playerState.gold += foundGold;
                         playerState.inventory.push(foundItem);
-                        document.getElementById('log').innerText = `🏆 Looted ${foundGold} Gold & ${foundItem}!`;
+                        document.getElementById('log').innerText = `🏆 Looted ${foundItem}!`;
                     }
-                    
-                } else if (targetTile === TILE.GOBLIN || targetTile === TILE.BAT) {
-                    
-                    // MELEE COMBAT (STR, DEX, CON)
-                    let enemyName = targetTile === TILE.GOBLIN ? "Goblin" : "Bat";
-                    
-                    let baseDmg = 1 + Math.floor(playerState.stats.str / 4);
-                    let isCrit = (Math.random() * 100) < playerState.stats.dex;
-                    let dealtDmg = isCrit ? baseDmg * 2 : baseDmg;
-                    
-                    let enemyAtk = Math.floor(Math.random() * 4) + 2; 
-                    let defense = Math.floor(playerState.stats.con / 5);
-                    let damageTaken = Math.max(0, enemyAtk - defense); 
-                    
-                    playerState.hp -= damageTaken;
-                    gameMap[targetY][targetX] = TILE.FLOOR; 
-                    
-                    if (playerState.hp <= 0) {
-                        playerState.hp = 0;
-                        document.getElementById('log').innerText = `💀 The ${enemyName} killed you! GAME OVER.`;
-                    } else {
-                        let critText = isCrit ? "CRITICAL HIT! " : "";
-                        document.getElementById('log').innerText = `⚔️ ${critText}Dealt ${dealtDmg} dmg. Took ${damageTaken} dmg (blocked ${defense}).`;
-                    }
-
                 } else if (targetTile === TILE.TRAP) {
-                    
-                    // TRAP TRIGGER
-                    let trapDmg = 4;
-                    playerState.hp -= trapDmg;
-                    gameMap[targetY][targetX] = TILE.FLOOR; // Trap broken
-                    playerPos.x = targetX;
-                    playerPos.y = targetY;
-                    document.getElementById('log').innerText = `💥 Stepped on a hidden trap! Took ${trapDmg} damage.`;
-
+                    let trapDmg = 4; playerState.hp -= trapDmg; gameMap[targetY][targetX] = TILE.FLOOR; 
+                    playerPos.x = targetX; playerPos.y = targetY;
+                    spawnText(playerPos.x, playerPos.y, `-${trapDmg}`, '#ef4444');
+                    document.getElementById('log').innerText = `💥 Stepped on a hidden trap!`;
                 } else {
-                    playerPos.x = targetX;
-                    playerPos.y = targetY;
+                    playerPos.x = targetX; playerPos.y = targetY; // Standard Move
                 }
-            } else {
-                tookAction = false; 
-            }
+            } else { tookAction = false; }
         }
     }
 
-    if (tookAction && playerState.hp > 0) {
-        let regenChance = playerState.stats.wis * 0.015; 
-        if (Math.random() < regenChance) {
-            if (playerState.hp < playerState.maxHp) playerState.hp++;
-            if (playerState.mp < playerState.maxMp) playerState.mp++;
-        }
-        updateUI();
-        drawScene();
-    }
+    if (tookAction && playerState.hp > 0) processTurn();
 });
 
+// --- 7. PROCEDURAL MAP GENERATION ---
 function generateMap() {
-    gameMap = [];
+    gameMap = []; enemies = [];
     for (let y = 0; y < MAP_HEIGHT; y++) {
-        let row = [];
-        for (let x = 0; x < MAP_WIDTH; x++) {
-            if (x === 0 || x === MAP_WIDTH - 1 || y === 0 || y === MAP_HEIGHT - 1) {
-                row.push(TILE.WALL);
-            } else {
-                row.push(TILE.FLOOR);
-            }
-        }
+        let row = []; for (let x = 0; x < MAP_WIDTH; x++) row.push(TILE.WALL);
         gameMap.push(row);
     }
 
-    gameMap[2][2] = TILE.STAIRS_UP;
-    playerPos = { x: 2, y: 2 };
+    let rooms = [];
+    for(let i=0; i<4; i++) {
+        let w = 4 + Math.floor(Math.random() * 4); let h = 4 + Math.floor(Math.random() * 4);
+        let x = 1 + Math.floor(Math.random() * (MAP_WIDTH - w - 2)); let y = 1 + Math.floor(Math.random() * (MAP_HEIGHT - h - 2));
+        let room = {x, y, w, h, cx: Math.floor(x+w/2), cy: Math.floor(y+h/2)}; rooms.push(room);
+        
+        for(let ry = y; ry < y+h; ry++) { for(let rx = x; rx < x+w; rx++) gameMap[ry][rx] = TILE.FLOOR; }
+        if (i > 0) {
+            let prev = rooms[i-1];
+            for(let px = Math.min(room.cx, prev.cx); px <= Math.max(room.cx, prev.cx); px++) gameMap[room.cy][px] = TILE.FLOOR;
+            for(let py = Math.min(room.cy, prev.cy); py <= Math.max(room.cy, prev.cy); py++) gameMap[py][prev.cx] = TILE.FLOOR;
+        }
+    }
 
-    gameMap[15][15] = TILE.STAIRS_DOWN;
+    playerPos = { x: rooms[0].cx, y: rooms[0].cy };
+    gameMap[playerPos.y][playerPos.x] = TILE.STAIRS_UP;
+    gameMap[rooms[3].cy][rooms[3].cx] = TILE.STAIRS_DOWN;
 
-    for (let i = 4; i < 12; i++) gameMap[6][i] = TILE.WALL;
-    gameMap[6][6] = TILE.DOOR_CLOSED;
-    gameMap[6][9] = TILE.DOOR_BROKEN;
-
-    gameMap[4][5] = TILE.CHEST_CLOSED;
-    gameMap[4][10] = TILE.CHEST_CLOSED;
-
-    gameMap[8][12] = TILE.GOBLIN;
-    gameMap[5][14] = TILE.BAT;
-    
-    // Add traps directly to the map
-    gameMap[5][3] = TILE.TRAP;
-    gameMap[11][8] = TILE.TRAP;
+    for(let i=1; i<rooms.length; i++) {
+        let r = rooms[i];
+        if (Math.random() > 0.3) gameMap[r.y + 1][r.x + 1] = TILE.CHEST_CLOSED;
+        if (Math.random() > 0.5) gameMap[r.y + 2][r.cx] = TILE.TRAP;
+        if (Math.random() > 0.2) {
+            let typeStr = Math.random() > 0.5 ? 'GOBLIN' : 'BAT';
+            let ex = r.x + Math.floor(Math.random() * (r.w-1)); let ey = r.y + Math.floor(Math.random() * (r.h-1));
+            if (gameMap[ey][ex] === TILE.FLOOR) {
+                enemies.push({
+                    x: ex, y: ey, type: typeStr, name: typeStr === 'GOBLIN' ? 'Goblin' : 'Bat',
+                    hp: typeStr === 'GOBLIN' ? 12 + playerState.level : 6 + playerState.level,
+                    atk: typeStr === 'GOBLIN' ? 3 + Math.floor(playerState.level/2) : 2 + Math.floor(playerState.level/2)
+                });
+            }
+        }
+    }
 }
 
-// --- 7. RENDERING ENGINE ---
+// --- 8. RENDERING LOOP ---
 function drawSprite(key, gridX, gridY) {
-    const spr = SPRITE_MAP[key];
-    if (!spr) return;
-    
-    gCtx.drawImage(
-        spriteSheet, spr.col * SHEET_GRID, spr.row * SHEET_GRID, SHEET_GRID, SHEET_GRID,         
-        gridX * GAME_TILE, gridY * GAME_TILE, GAME_TILE, GAME_TILE             
-    );
+    const spr = SPRITE_MAP[key]; if (!spr) return;
+    gCtx.drawImage(spriteSheet, spr.col * SHEET_GRID, spr.row * SHEET_GRID, SHEET_GRID, SHEET_GRID, gridX * GAME_TILE, gridY * GAME_TILE, GAME_TILE, GAME_TILE);
 }
 
-function drawScene() {
+function gameLoop() {
     gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
         for (let x = 0; x < MAP_WIDTH; x++) {
             let t = gameMap[y][x];
-            
             if (t !== TILE.WALL) drawSprite('FLOOR', x, y);
-            
             if (t === TILE.WALL) drawSprite('WALL', x, y);
             if (t === TILE.STAIRS_UP) drawSprite('STAIRS_UP', x, y);
             if (t === TILE.STAIRS_DOWN) drawSprite('STAIRS_DOWN', x, y);
-            if (t === TILE.DOOR_CLOSED) drawSprite('DOOR_CLOSED', x, y);
-            if (t === TILE.DOOR_OPEN) drawSprite('DOOR_OPEN', x, y);
-            if (t === TILE.DOOR_BROKEN) drawSprite('DOOR_BROKEN', x, y);
             if (t === TILE.CHEST_CLOSED) drawSprite('CHEST_CLOSED', x, y);
             if (t === TILE.CHEST_OPEN) drawSprite('CHEST_OPEN', x, y);
-            if (t === TILE.GOBLIN) drawSprite('GOBLIN', x, y);
-            if (t === TILE.BAT) drawSprite('BAT', x, y);
-            
-            // TRAP VISIBILITY LOGIC (DEX)
-            if (t === TILE.TRAP) {
-                if (playerState.stats.dex >= 12) {
-                    drawSprite('TRAP', x, y); // Spotted!
-                } else {
-                    drawSprite('FLOOR', x, y); // Hidden...
-                }
-            }
+            if (t === TILE.TRAP) { if (playerState.stats.dex >= 12) drawSprite('TRAP', x, y); else drawSprite('FLOOR', x, y); }
         }
     }
 
-    if (playerState.hp > 0) {
-        drawSprite('HERO', playerPos.x, playerPos.y); 
+    enemies.forEach(en => {
+        drawSprite(en.type, en.x, en.y);
+        gCtx.fillStyle = 'black'; gCtx.fillRect(en.x * GAME_TILE + 2, en.y * GAME_TILE - 4, 28, 4);
+        gCtx.fillStyle = '#ef4444'; gCtx.fillRect(en.x * GAME_TILE + 2, en.y * GAME_TILE - 4, Math.max(0, (en.hp / 20) * 28), 4);
+    });
+
+    if (playerState.hp > 0) drawSprite('HERO', playerPos.x, playerPos.y); 
+
+    for (let i = floatTexts.length - 1; i >= 0; i--) {
+        let ft = floatTexts[i];
+        gCtx.fillStyle = 'rgba(0,0,0,0.7)'; gCtx.font = "bold 16px Courier New";
+        gCtx.fillText(ft.text, (ft.x * GAME_TILE) + 8 + 1, (ft.y * GAME_TILE) + 8 - ft.offset + 1); 
+        gCtx.fillStyle = ft.color; gCtx.fillText(ft.text, (ft.x * GAME_TILE) + 8, (ft.y * GAME_TILE) + 8 - ft.offset);
+        ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
     }
+    requestAnimationFrame(gameLoop);
 }
 
-// --- 8. ALIGNMENT STUDIO LOGIC ---
+// --- 9. ALIGNMENT STUDIO ---
 function setTarget(key, btn) {
-    currentMappingTarget = key;
-    if (activeBtn) activeBtn.classList.remove('active');
-    btn.classList.add('active');
-    activeBtn = btn;
+    currentMappingTarget = key; if (activeBtn) activeBtn.classList.remove('active');
+    btn.classList.add('active'); activeBtn = btn;
 }
-
 sCanvas.addEventListener('click', (e) => {
     if (!currentMappingTarget) return;
     const rect = sCanvas.getBoundingClientRect();
-    const col = Math.floor(((e.clientX - rect.left) / 2) / SHEET_GRID);
-    const row = Math.floor(((e.clientY - rect.top) / 2) / SHEET_GRID);
-    SPRITE_MAP[currentMappingTarget] = { col, row };
+    SPRITE_MAP[currentMappingTarget] = { 
+        col: Math.floor(((e.clientX - rect.left) / 2) / SHEET_GRID), 
+        row: Math.floor(((e.clientY - rect.top) / 2) / SHEET_GRID) 
+    };
     renderStudioGrid(); 
-    drawScene(); 
 });
-
 function renderStudioGrid() {
-    sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
-    sCtx.imageSmoothingEnabled = false;
-    sCtx.drawImage(spriteSheet, 0, 0, 128 * 2, 128 * 2); 
-    for (let r = 0; r < 4; r++) { // 4 rows
+    sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height); sCtx.imageSmoothingEnabled = false; sCtx.drawImage(spriteSheet, 0, 0, 128 * 2, 128 * 2); 
+    for (let r = 0; r < 4; r++) { 
         for (let c = 0; c < 4; c++) {
-            sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-            sCtx.strokeRect(c * 64, r * 64, 64, 64);
+            sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)"; sCtx.strokeRect(c * 64, r * 64, 64, 64);
             for (let key in SPRITE_MAP) {
                 let spr = SPRITE_MAP[key];
                 if (spr && spr.col === c && spr.row === r) {
-                    sCtx.strokeStyle = "#3b82f6";
-                    sCtx.lineWidth = 2;
-                    sCtx.strokeRect(c * 64, r * 64, 64, 64);
-                    sCtx.lineWidth = 1;
-                    sCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
-                    sCtx.fillRect(c * 64, r * 64, 24, 12);
-                    sCtx.fillStyle = "#ffffff";
-                    sCtx.font = "10px Arial";
-                    sCtx.fillText(key.substring(0, 3), c * 64 + 2, r * 64 + 10);
+                    sCtx.strokeStyle = "#3b82f6"; sCtx.lineWidth = 2; sCtx.strokeRect(c * 64, r * 64, 64, 64); sCtx.lineWidth = 1;
+                    sCtx.fillStyle = "rgba(59, 130, 246, 0.8)"; sCtx.fillRect(c * 64, r * 64, 24, 12);
+                    sCtx.fillStyle = "#ffffff"; sCtx.font = "10px Arial"; sCtx.fillText(key.substring(0, 3), c * 64 + 2, r * 64 + 10);
                 }
             }
         }
