@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Modernized Classic Layout</title>
+    <title>Dungeon Engine - Advanced Procedural Edition</title>
     <style>
         /* --- MODERN SLATE & DARK FANTASY PALETTE --- */
         body {
-            background-color: #121824;
+            background-color: #0f172a;
             color: #e2e8f0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 14px;
@@ -24,15 +24,15 @@
             background-color: #1e293b;
             border: 1px solid #334155;
             border-radius: 8px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
             padding: 6px;
             width: 524px;
             position: relative;
         }
 
-        /* Sleek Modern Header Title */
+        /* Sleek Title Header */
         .win-titlebar {
-            background-color: #0f172a;
+            background-color: #020617;
             color: #38bdf8;
             font-weight: 600;
             padding: 8px 12px;
@@ -56,14 +56,9 @@
             padding: 2px 8px;
             border-radius: 4px;
             cursor: pointer;
-            transition: background 0.2s;
-        }
-        .win-btn-small:hover {
-            background-color: #ef4444;
-            color: white;
         }
 
-        /* Clean Top Navigation Drop Menu */
+        /* Menu Bar */
         .win-menubar {
             display: flex;
             gap: 16px;
@@ -81,17 +76,16 @@
             color: #38bdf8;
         }
 
-        /* High-fidelity Tactical Action Ribbon */
+        /* Action Toolbar Ribbon */
         .win-toolbar {
             display: flex;
             gap: 6px;
             padding: 8px;
-            background-color: #0f172a;
+            background-color: #020617;
             border-bottom: 1px solid #334155;
             align-items: center;
         }
 
-        /* Modern Flat Action Buttons */
         .win-button {
             background-color: #1e293b;
             border: 1px solid #475569;
@@ -106,27 +100,19 @@
         .win-button:hover:not(:disabled) {
             background-color: #38bdf8;
             border-color: #38bdf8;
-            color: #0f172a;
-        }
-        .win-button:active:not(:disabled) {
-            transform: scale(0.97);
-        }
-        .win-button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
+            color: #020617;
         }
         
-        /* Specific accent highlight for your structural rest handler */
         #btn-rest {
             border-color: #10b981;
             color: #10b981;
         }
         #btn-rest:hover {
             background-color: #10b981;
-            color: #0f172a;
+            color: #020617;
         }
 
-        /* Smooth Canvas Viewport Containment */
+        /* Canvas Viewport */
         .canvas-container {
             border-bottom: 1px solid #334155;
             background-color: #020617;
@@ -139,17 +125,17 @@
             display: block;
         }
 
-        /* --- GRID LOWER DIVISION FRAMEBOARD PANEL (Reference: image_289095.jpg) --- */
+        /* --- TWO PANEL BASEBOARD SPLIT --- */
         .win-bottom-pane {
             display: flex;
             gap: 6px;
             margin-top: 6px;
         }
 
-        /* Modernized Terminal Log Feed Window */
+        /* Modernized Terminal Log */
         .win-log-box {
             flex: 1.4;
-            background-color: #0f172a;
+            background-color: #020617;
             color: #cbd5e1;
             border: 1px solid #334155;
             border-radius: 4px;
@@ -157,7 +143,7 @@
             overflow-y: auto;
             padding: 8px;
             box-sizing: border-box;
-            font-family: 'Consolas', 'Courier New', Courier, monospace;
+            font-family: 'Consolas', monospace;
             font-size: 12px;
         }
         .log-entry {
@@ -169,10 +155,10 @@
         .log-important { border-left-color: #f43f5e; color: #fda4af; }
         .log-success { border-left-color: #10b981; color: #a7f3d0; }
 
-        /* Modernized Status Side Matrix */
+        /* Status Pane */
         .win-status-box {
             flex: 0.8;
-            background-color: #0f172a;
+            background-color: #020617;
             color: #f8fafc;
             border: 1px solid #334155;
             border-radius: 4px;
@@ -189,41 +175,9 @@
             font-size: 12px;
             align-items: center;
         }
-        .status-lbl {
-            color: #94a3b8;
-            font-weight: 500;
-        }
-        .status-val {
-            font-weight: 600;
-            font-family: monospace;
-            font-size: 13px;
-        }
+        .status-lbl { color: #94a3b8; font-weight: 500; }
+        .status-val { font-weight: 600; font-family: monospace; font-size: 13px; }
 
-        /* --- WINDOW MODAL DIALOG POPUPS --- */
-        .win-dialog {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.7);
-            width: 340px;
-            padding: 6px;
-            display: none;
-            z-index: 200;
-        }
-        .dialog-header {
-            background-color: #0f172a;
-            color: #38bdf8;
-            padding: 6px 10px;
-            font-weight: 600;
-            border-radius: 4px;
-        }
-        .dialog-body {
-            padding: 12px 6px;
-        }
-        
         .hint-text {
             font-size: 12px;
             color: #64748b;
@@ -236,7 +190,7 @@
 
     <div class="win-application">
         <div class="win-titlebar">
-            <span>Dungeon Engine v2.0 - Modernized Layout</span>
+            <span>Dungeon Engine v2.5 - Vector Graphic Build</span>
             <div class="win-title-buttons">
                 <button class="win-btn-small">_</button>
                 <button class="win-btn-small">X</button>
@@ -244,28 +198,25 @@
         </div>
 
         <div class="win-menubar">
-            <span class="win-menu-item" onclick="toggleInventory()">Inventory</span>
-            <span class="win-menu-item" onclick="toggleStatus()">Character Stat Sheet</span>
-            <span class="win-menu-item" onclick="location.reload()">Reset Map</span>
+            <span class="win-menu-item" onclick="appendLog('Inventory system active.')">Inventory</span>
+            <span class="win-menu-item" onclick="appendLog('STR: 14 | DEX: 12 | CON: 15 | INT: 10')">Stats</span>
+            <span class="win-menu-item" onclick="regenerateFloor()">Regen Floor</span>
         </div>
 
         <div class="win-toolbar">
-            <button class="win-button" id="btn-get" onclick="triggerAction('g')">Get</button>
-            <button class="win-button" id="btn-rest" onclick="triggerAction('rest')">Rest Until Healed</button>
-            <button class="win-button" onclick="triggerAction('search')">Search</button>
-            <button class="win-button" onclick="triggerAction('h')">Heal (5MP)</button>
-            <button class="win-button" onclick="triggerAction('f')">Blast (3MP)</button>
-            <button class="win-button" onclick="triggerAction('stairs')">Descend</button>
+            <button class="win-button" onclick="triggerAction('rest')">Pass Turn</button>
+            <button class="win-button" id="btn-rest" onclick="triggerAction('r')">Rest Until Healed</button>
+            <button class="win-button" onclick="triggerAction('f')">Mana Blast (3MP)</button>
+            <button class="win-button" onclick="triggerAction('stairs')">Descend Stairs</button>
         </div>
 
         <div class="canvas-container">
             <canvas id="gameCanvas" width="512" height="384"></canvas>
         </div>
 
-        <!-- TWO PANELS SYSTEM BASEBOARD (Reference: image_289095.jpg) -->
         <div class="win-bottom-pane">
             <div class="win-log-box" id="log">
-                <div class="log-entry">Engine initiated. Welcome back, adventurer.</div>
+                <div class="log-entry">Dungeon initialized with advanced vector styling features.</div>
             </div>
 
             <div class="win-status-box">
@@ -273,57 +224,32 @@
                 <div class="status-row"><span class="status-lbl">Mana:</span><span class="status-val" id="ui-mp" style="color: #38bdf8;">0/0</span></div>
                 <div class="status-row"><span class="status-lbl">Floor:</span><span class="status-val" id="ui-level" style="color: #e2e8f0;">1</span></div>
                 <div class="status-row"><span class="status-lbl">Gold:</span><span class="status-val" id="ui-gold" style="color: #eab308;">0</span></div>
-                <div class="status-row"><span class="status-lbl">Level/XP:</span><span class="status-val" id="ui-xp" style="color: #10b981;">1 (0/20)</span></div>
-            </div>
-        </div>
-
-        <!-- CHARACTER SHEET MODAL MODULE -->
-        <div id="status-modal" class="win-dialog">
-            <div class="dialog-header">Attributes Profiles</div>
-            <div class="dialog-body">
-                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Strength:</span><span id="st-str" class="status-val"></span></div>
-                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Dexterity:</span><span id="st-dex" class="status-val"></span></div>
-                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Constitution:</span><span id="st-con" class="status-val"></span></div>
-                <div class="status-row" style="margin-bottom:6px;"><span class="status-lbl">Intelligence:</span><span id="st-int" class="status-val"></span></div>
-                <div style="text-align: right; margin-top: 12px;">
-                    <button class="win-button" onclick="toggleStatus()">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- INVENTORY SHEET MODAL MODULE -->
-        <div id="inv-modal" class="win-dialog">
-            <div class="dialog-header">Bag Storage</div>
-            <div class="dialog-body">
-                <div id="inv-bag-list" style="max-height: 120px; overflow-y:auto; font-family:monospace; font-size:12px;"></div>
-                <div style="text-align: right; margin-top: 12px;">
-                    <button class="win-button" onclick="toggleInventory()">Close</button>
-                </div>
+                <div class="status-row"><span class="status-lbl">XP:</span><span class="status-val" id="ui-xp" style="color: #10b981;">1 (0/20)</span></div>
             </div>
         </div>
     </div>
 
     <div class="hint-text">
-        Movements: <b>WASD or Arrow Keys</b>. Rest hotkey maps directly to the <b>R Key</b>.
+        Move: <b>WASD / Arrow Keys</b>. Automated recovery setup: <b>R Key</b>. Descend Stairs: <b>Enter / Stairs Button</b>.
     </div>
 
 <script>
-// --- CORE DRIVER SYSTEMS ---
-const GAME_TILE = 32; const MAP_WIDTH = 24; const MAP_HEIGHT = 24;
+// --- CONFIGURATION ENGINE ---
+const GAME_TILE = 32; 
+const MAP_WIDTH = 30; const MAP_HEIGHT = 30;
 const VIEW_WIDTH = 16; const VIEW_HEIGHT = 12;
 
-const TILE = { WALL: 0, FLOOR: 1, STAIRS_DOWN: 6 };
+const TILE = { WALL: 0, FLOOR: 1, STAIRS_DOWN: 2 };
 
 let playerState = {
     stats: { str: 14, dex: 12, con: 15, int: 10 },
-    hp: 12, maxHp: 30, mp: 2, maxMp: 20, gold: 120,
-    dungeonFloor: 1, charLevel: 1, xp: 0, maxXp: 20,
-    inventory: ["Vibrant Elixir", "Iron Broadsword"]
+    hp: 15, maxHp: 40, mp: 5, maxMp: 25, gold: 150,
+    dungeonFloor: 1, charLevel: 1, xp: 0, maxXp: 20
 };
 
-let gameMap = []; let enemies = []; let groundItems = []; let floatTexts = [];
-let playerPos = { x: 5, y: 5 }; let camX = 0; let camY = 0;
-let gameState = "PLAYING";
+let gameMap = []; let enemies = []; let floatTexts = [];
+let playerPos = { x: 0, y: 0 }; let camX = 0; let camY = 0;
+let isResting = false; let restInterval = null;
 
 function appendLog(msg, type = '') {
     const logBox = document.getElementById('log');
@@ -345,204 +271,31 @@ function updateCamera() {
     camY = Math.max(0, Math.min(playerPos.y - Math.floor(VIEW_HEIGHT / 2), MAP_HEIGHT - VIEW_HEIGHT));
 }
 
-function toggleStatus() {
-    let w = document.getElementById('status-modal');
-    if (w.style.display === 'block') { w.style.display = 'none'; gameState = "PLAYING"; } 
-    else { 
-        w.style.display = 'block'; gameState = "MODAL";
-        document.getElementById('st-str').innerText = playerState.stats.str;
-        document.getElementById('st-dex').innerText = playerState.stats.dex;
-        document.getElementById('st-con').innerText = playerState.stats.con;
-        document.getElementById('st-int').innerText = playerState.stats.int;
-    }
-}
-
-function toggleInventory() {
-    let w = document.getElementById('inv-modal');
-    if (w.style.display === 'block') { w.style.display = 'none'; gameState = "PLAYING"; } 
-    else { 
-        w.style.display = 'block'; gameState = "MODAL";
-        let b = document.getElementById('inv-bag-list');
-        b.innerHTML = playerState.inventory.map(i => `<div style="padding:4px 0; border-bottom:1px solid #334155;">• ${i}</div>`).join('');
-    }
-}
-
-function triggerAction(key) {
-    if (gameState !== "PLAYING") return;
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: key }));
-}
-
-// --- AMBUSH & REST AUTOMATION LAYER ENGINE ---
-function executeRestCycle() {
-    if (playerState.hp <= 0) return;
-
-    // 1. Check for Ambush Encounter (25% Chance per iteration)
-    if (Math.random() < 0.25) {
-        let spawnPoints = [
-            {x: playerPos.x - 1, y: playerPos.y}, {x: playerPos.x + 1, y: playerPos.y},
-            {x: playerPos.x, y: playerPos.y - 1}, {x: playerPos.x, y: playerPos.y + 1}
-        ];
-        let validSpawns = spawnPoints.filter(p => gameMap[p.y] && gameMap[p.y][p.x] === TILE.FLOOR && !enemies.some(e => e.x === p.x && e.y === p.y));
-        
-        if (validSpawns.length > 0) {
-            let choice = validSpawns[Math.floor(Math.random() * validSpawns.length)];
-            enemies.push({ x: choice.x, y: choice.y, name: "Ambushing Orc", hp: 12, maxHp: 12, atk: 5 });
-            appendLog("AMBUSHED! A monster attacks while you slept!", "log-important");
-            spawnText(playerPos.x, playerPos.y, "Surprised!", "#ef4444");
-            
-            // Forces enemy action turn immediately and breaks the loop early
-            processTurn();
-            return;
-        }
-    }
-
-    // 2. Heal calculations increments
-    let recoveredHp = Math.min(playerState.maxHp - playerState.hp, 3);
-    let recoveredMp = Math.min(playerState.maxMp - playerState.mp, 2);
-    
-    playerState.hp += recoveredHp;
-    playerState.mp += recoveredMp;
-    
-    if (recoveredHp > 0 || recoveredMp > 0) {
-        appendLog(`Resting... recovered +${recoveredHp} HP, +${recoveredMp} MP.`);
-    }
-
-    updateUI();
-
-    // 3. Keep resting iteratively until completely full
-    if (playerState.hp < playerState.maxHp || playerState.mp < playerState.maxMp) {
-        setTimeout(executeRestCycle, 250); // Small procedural delay mimics automated turns passing cleanly
-    } else {
-        appendLog("Fully rested and recovered!", "log-success");
-    }
-}
-
-function processTurn() {
-    // Basic AI follow loop
-    enemies.forEach(en => {
-        let dist = Math.abs(playerPos.x - en.x) + Math.abs(playerPos.y - en.y);
-        if (dist === 1) {
-            let dmg = Math.max(1, en.atk - Math.floor(playerState.stats.con / 4));
-            playerState.hp -= dmg;
-            appendLog(`${en.name} strikes you for ${dmg} dmg!`, "log-important");
-            spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
-        } else if (dist < 5) {
-            let dx = Math.sign(playerPos.x - en.x);
-            let dy = Math.sign(playerPos.y - en.y);
-            if (gameMap[en.y][en.x + dx] === TILE.FLOOR) en.x += dx;
-            else if (gameMap[en.y + dy][en.x] === TILE.FLOOR) en.y += dy;
-        }
-    });
-    if (playerState.hp <= 0) { playerState.hp = 0; appendLog("You have fallen in combat!", "log-important"); }
-    updateCamera(); updateUI();
-}
-
-function spawnText(x, y, text, color) { floatTexts.push({ x, y, text, color, life: 25, offset: 0 }); }
-
-// --- CONTROLLER HANDLERS ---
-window.addEventListener('keydown', (e) => {
-    if (playerState.hp <= 0 || gameState !== "PLAYING") return;
-
-    let tookAction = false;
-    let dx = 0, dy = 0;
-
-    if (e.key === 'rest' || e.key === 'r' || e.key === 'R') {
-        if (playerState.hp === playerState.maxHp && playerState.mp === playerState.maxMp) {
-            appendLog("You are already at peak health.");
-        } else {
-            appendLog("You set camp and begin resting...");
-            executeRestCycle();
-        }
-        return;
-    }
-    else if (e.key === 'ArrowUp' || e.key === 'w') dy = -1;
-    else if (e.key === 'ArrowDown' || e.key === 's') dy = 1;
-    else if (e.key === 'ArrowLeft' || e.key === 'a') dx = -1;
-    else if (e.key === 'ArrowRight' || e.key === 'd') dx = 1;
-
-    if (dx !== 0 || dy !== 0) {
-        let tx = playerPos.x + dx; let ty = playerPos.y + dy;
-        let target = gameMap[ty] ? gameMap[ty][tx] : TILE.WALL;
-        let targetEnemy = enemies.find(en => en.x === tx && en.y === ty);
-
-        if (targetEnemy) {
-            let hit = 4 + Math.floor(playerState.stats.str / 3);
-            targetEnemy.hp -= hit;
-            appendLog(`You slash ${targetEnemy.name} for ${hit} damage.`);
-            spawnText(targetEnemy.x, targetEnemy.y, `-${hit}`, '#ffffff');
-            if (targetEnemy.hp <= 0) {
-                enemies = enemies.filter(en => en !== targetEnemy);
-                appendLog("Target defeated!", "log-success");
-            }
-            tookAction = true;
-        } else if (target === TILE.FLOOR || target === TILE.STAIRS_DOWN) {
-            playerPos = { x: tx, y: ty };
-            tookAction = true;
-        }
-    }
-
-    if (tookAction) processTurn();
-});
-
-// --- MODERNIZED SMOOTH VECTOR CANVAS RENDER ENGINE ---
-const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
-
-function initDungeon() {
+// --- FULL ROOM-CONNECT PROCEDURAL DUNGEON GENERATOR ---
+function generateProceduralDungeon() {
     gameMap = [];
+    enemies = [];
+    
+    // Fill completely with solid wall blueprint masking
     for (let y = 0; y < MAP_HEIGHT; y++) {
         let row = []; for (let x = 0; x < MAP_WIDTH; x++) row.push(TILE.WALL);
         gameMap.push(row);
     }
-    // Basic programmatic open cavern room layout
-    for (let y = 3; y < 18; y++) {
-        for (let x = 3; x < 20; x++) gameMap[y][x] = TILE.FLOOR;
-    }
-    gameMap[15][18] = TILE.STAIRS_DOWN;
-    enemies.push({ x: 12, y: 8, name: "Roaming Skeleton", hp: 10, maxHp: 10, atk: 4 });
-    updateCamera(); updateUI();
-}
 
-function drawRender() {
-    ctx.fillStyle = "#020617"; ctx.fillRect(0,0,cvs.width,cvs.height);
+    let rooms = [];
+    const minSize = 4, maxSize = 7, roomCount = 7;
 
-    for(let y = camY; y < camY + VIEW_HEIGHT; y++) {
-        for(let x = camX; x < camX + VIEW_WIDTH; x++) {
-            let sX = (x - camX) * GAME_TILE; let sY = (y - camY) * GAME_TILE;
-            if (gameMap[y] && gameMap[y][x] === TILE.FLOOR) {
-                ctx.fillStyle = "#1e293b"; ctx.fillRect(sX, sY, 30, 30); // Clean flat stylized tiles
-            } else if (gameMap[y] && gameMap[y][x] === TILE.STAIRS_DOWN) {
-                ctx.fillStyle = "#0284c7"; ctx.fillRect(sX, sY, 30, 30);
-            } else {
-                ctx.fillStyle = "#0f172a"; ctx.fillRect(sX, sY, 32, 32);
-            }
+    for (let i = 0; i < roomCount; i++) {
+        let w = minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
+        let h = minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
+        let x = 1 + Math.floor(Math.random() * (MAP_WIDTH - w - 2));
+        let y = 1 + Math.floor(Math.random() * (MAP_HEIGHT - h - 2));
+
+        // Overlap detection collision validation
+        let overlap = false;
+        for (let r of rooms) {
+            if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) overlap = true;
         }
-    }
 
-    // Modern flat graphics rendering overlays
-    enemies.forEach(en => {
-        let sX = (en.x - camX) * GAME_TILE; let sY = (en.y - camY) * GAME_TILE;
-        ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(sX+16, sY+16, 10, 0, Math.PI*2); ctx.fill();
-    });
-
-    if (playerState.hp > 0) {
-        let pX = (playerPos.x - camX) * GAME_TILE; let pY = (playerPos.y - camY) * GAME_TILE;
-        ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.arc(pX+16, pY+16, 12, 0, Math.PI*2); ctx.fill();
-    }
-
-    // Smooth float combat font styling overlays
-    for (let i = floatTexts.length - 1; i >= 0; i--) {
-        let ft = floatTexts[i];
-        let sX = (ft.x - camX) * GAME_TILE; let sY = (ft.y - camY) * GAME_TILE;
-        ctx.fillStyle = ft.color; ctx.font = "bold 12px sans-serif";
-        ctx.fillText(ft.text, sX + 4, sY - ft.offset);
-        ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
-    }
-
-    requestAnimationFrame(drawRender);
-}
-
-initDungeon();
-requestAnimationFrame(drawRender);
-</script>
-</body>
-</html>
+        if (!overlap) {
+            let newRoom = { x, y, w, h, cx: Math.floor(x + w / 2), ...
