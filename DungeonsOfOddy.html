@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Engine - Progression & Line of Sight</title>
+    <title>Dungeon Engine - Town and Economy</title>
     <style>
         body {
             background-color: #1e1e2f; color: #c8c8d0;
@@ -41,7 +41,6 @@
         .attr-detail { color: #9ca3af; font-size: 0.9em; font-weight: normal; }
         
         canvas { background-color: #000; image-rendering: pixelated; }
-        #studioCanvas { flex-shrink: 0; object-fit: contain; cursor: crosshair; }
         
         .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; max-width: 256px; }
         button {
@@ -54,18 +53,20 @@
         #log { margin-top: 20px; color: #10b981; font-weight: bold; min-height: 1.5em; }
         .instructions { margin-top: 10px; font-size: 0.85em; color: #9ca3af; text-align: center; }
 
-        /* Modal Overlays (Inventory & Level Up) */
+        /* Modal Overlays (Inventory, Level Up, Town) */
         .modal {
             position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
-            background-color: rgba(26, 26, 36, 0.96); border-radius: 8px; 
+            background-color: rgba(26, 26, 36, 0.97); border-radius: 8px; 
             padding: 20px; display: none; overflow-y: auto; z-index: 100;
         }
         #inv-modal { border: 2px solid #3b82f6; }
         #lvl-modal { border: 2px solid #a855f7; text-align: center; }
+        #town-modal { border: 2px solid #10b981; }
         
         .modal h2 { margin-top: 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
         #inv-modal h2 { color: #3b82f6; }
         #lvl-modal h2 { color: #a855f7; }
+        #town-modal h2 { color: #10b981; text-align: center; }
 
         .inv-row {
             display: flex; justify-content: space-between; background: #1e1e2f;
@@ -88,6 +89,11 @@
         .lvl-row span { font-weight: bold; font-size: 1.1em; }
         .btn-plus { background-color: #a855f7; padding: 6px 14px; font-size: 1.1em; }
         .btn-plus:hover { background-color: #9333ea; }
+
+        /* Town Column layouts */
+        .town-split { display: flex; gap: 20px; margin-top: 15px; }
+        .town-col { flex: 1; background: #15151f; padding: 12px; border-radius: 6px; border: 1px solid #3b3b4f; max-height: 550px; overflow-y: auto; }
+        .town-col h3 { margin-top: 0; border-bottom: 1px solid #3b3b4f; padding-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -117,7 +123,7 @@
         </div>
 
         <div class="panel">
-            <canvas id="gameCanvas" width="576" height="576"></canvas>
+            <canvas id="gameCanvas" width="960" height="960"></canvas>
             
             <div id="inv-modal" class="modal">
                 <h2>Equipped</h2>
@@ -139,30 +145,33 @@
                 <div class="lvl-row"><span>Wisdom (WIS)</span><button class="btn-plus" onclick="allocateStat('wis')">+</button></div>
             </div>
 
+            <div id="town-modal" class="modal">
+                <h2>🏡 Welcome to Oakhaven Town 🏡</h2>
+                <p style="text-align: center;">Your wounds are fully healed! Trade artifacts and upgrade equipment below.</p>
+                
+                <div class="town-split">
+                    <div class="town-col">
+                        <h3 style="color: #60a5fa;">Blacksmith & Alchemist</h3>
+                        <div id="town-shop-list"></div>
+                    </div>
+                    <div class="town-col">
+                        <h3 style="color: #fbbf24;">Your Backpack (Click to Sell)</h3>
+                        <div id="town-sell-list"></div>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 25px;">
+                    <button style="background-color: #ef4444; padding: 10px 24px;" onclick="toggleTown()">Return to Dungeon</button>
+                </p>
+            </div>
+
             <div id="log">Welcome to the dungeon...</div>
             <div class="instructions">WASD/Arrows Move | G to Grab | Enter for Stairs | I for Inventory<br>H to Heal (5 MP) | F for Arcane Blast (3 MP)</div>
-        </div>
-
-        <div class="panel">
-            <h3>Alignment Studio</h3>
-            <canvas id="studioCanvas" width="256" height="256"></canvas>
-            <div class="controls" id="mapper-controls">
-                <button onclick="setTarget('WALL', this)">Wall</button>
-                <button onclick="setTarget('FLOOR', this)">Floor</button>
-                <button onclick="setTarget('STAIRS_UP', this)">Stairs Up</button>
-                <button onclick="setTarget('STAIRS_DOWN', this)">Stairs Dn</button>
-                <button onclick="setTarget('CHEST_CLOSED', this)">Chest</button>
-                <button onclick="setTarget('HERO', this)">Hero</button>
-                <button onclick="setTarget('GOBLIN', this)">Goblin</button>
-                <button onclick="setTarget('BAT', this)">Bat</button>
-                <button onclick="setTarget('LOOT_BAG', this)">Loot Bag</button>
-            </div>
         </div>
     </div>
 
 <script>
 // --- 1. CONSTANTS, ITEMS & DICTIONARIES ---
-const SHEET_GRID = 32; const GAME_TILE = 32; const MAP_WIDTH = 18; const MAP_HEIGHT = 18;
+const SHEET_GRID = 32; const GAME_TILE = 32; const MAP_WIDTH = 30; const MAP_HEIGHT = 30;
 
 const TILE = { 
     WALL: 0, FLOOR: 1, DOOR_CLOSED: 2, DOOR_OPEN: 3, DOOR_BROKEN: 4,
@@ -179,25 +188,25 @@ let SPRITE_MAP = {
 };
 
 const ITEM_DB = {
-    "Health Potion": { type: "consumable", desc: "Restores 20 HP", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
-    "Mana Potion": { type: "consumable", desc: "Restores 10 MP", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 10); } },
-    "Iron Dagger": { type: "weapon", bonusDmg: 2, desc: "+2 Damage" },
-    "Steel Sword": { type: "weapon", bonusDmg: 5, desc: "+5 Damage" },
-    "Leather Armor": { type: "armor", bonusDef: 2, desc: "+2 Defense" },
-    "Chainmail": { type: "armor", bonusDef: 5, desc: "+5 Defense" },
-    "Tome of Knowledge": { type: "consumable", desc: "+1 INT & Restores MP", use: (p) => { p.stats.int++; recalculateSecondaryStats(); } }
+    "Health Potion": { type: "consumable", value: 10, desc: "Restores 20 HP", use: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
+    "Mana Potion": { type: "consumable", value: 10, desc: "Restores 10 MP", use: (p) => { p.mp = Math.min(p.maxMp, p.mp + 10); } },
+    "Iron Dagger": { type: "weapon", value: 25, bonusDmg: 2, desc: "+2 Damage" },
+    "Steel Sword": { type: "weapon", value: 75, bonusDmg: 5, desc: "+5 Damage" },
+    "Leather Armor": { type: "armor", value: 30, bonusDef: 2, desc: "+2 Defense" },
+    "Chainmail": { type: "armor", value: 85, bonusDef: 5, desc: "+5 Defense" },
+    "Tome of Knowledge": { type: "consumable", value: 120, desc: "+1 INT & Restores MP", use: (p) => { p.stats.int++; recalculateSecondaryStats(); } }
 };
 const LOOT_TABLE = Object.keys(ITEM_DB);
 
 // --- 2. STATE VARIABLES ---
-let gameState = "PLAYING"; // "PLAYING", "INVENTORY", "LEVEL_UP"
+let gameState = "PLAYING"; // "PLAYING", "INVENTORY", "LEVEL_UP", "TOWN"
 
 let playerState = {
     stats: { str: 12, dex: 10, con: 14, int: 16, wis: 15 },
     hp: 0, maxHp: 0, mp: 0, maxMp: 0,
-    gold: 0, dungeonFloor: 1, charLevel: 1,
+    gold: 50, dungeonFloor: 1, charLevel: 1,
     xp: 0, maxXp: 20, unspentPoints: 0,
-    inventory: [], 
+    inventory: ["Health Potion"], 
     equipment: { weapon: null, armor: null }
 };
 
@@ -210,17 +219,11 @@ recalculateSecondaryStats();
 playerState.hp = playerState.maxHp;
 playerState.mp = playerState.maxMp;
 
-let gameMap = [];
-let enemies = [];      
-let groundItems = []; // Contains dropped items: {x, y, name, amount, isGold}
-let floatTexts = [];   
+let gameMap = []; let enemies = []; let groundItems = []; let floatTexts = [];   
 let playerPos = { x: 2, y: 2 }; 
-
-let currentMappingTarget = null; let activeBtn = null;
 
 // --- 3. CANVAS SETUP ---
 const gCanvas = document.getElementById('gameCanvas'); const gCtx = gCanvas.getContext('2d');
-const sCanvas = document.getElementById('studioCanvas'); const sCtx = sCanvas.getContext('2d');
 const spriteSheet = new Image();
 
 function drawTile(ctx, col, row, drawFunction) { ctx.save(); ctx.translate(col * 32, row * 32); drawFunction(ctx); ctx.restore(); }
@@ -241,8 +244,7 @@ function generateInternalSpriteSheet() {
 }
 
 spriteSheet.onload = () => {
-    gCtx.imageSmoothingEnabled = false; sCtx.imageSmoothingEnabled = false;
-    generateMap(); updateUI(); requestAnimationFrame(gameLoop);
+    gCtx.imageSmoothingEnabled = false; generateMap(); updateUI(); requestAnimationFrame(gameLoop);
 };
 generateInternalSpriteSheet();
 
@@ -281,7 +283,6 @@ function updateUI() {
     document.getElementById('ui-bag-count').innerText = playerState.inventory.length;
     document.getElementById('ui-bag-max').innerText = playerState.stats.str;
     
-    // Check floor items notice
     let standItem = groundItems.find(i => i.x === playerPos.x && i.y === playerPos.y);
     if (standItem && gameState === "PLAYING") {
         document.getElementById('log').innerText = standItem.isGold 
@@ -290,12 +291,10 @@ function updateUI() {
     }
 }
 
-// Bresenham's Raycasting Algorithm for Line of Sight Checks
 function hasLineOfSight(x1, y1, x2, y2) {
     let dx = Math.abs(x2 - x1); let dy = Math.abs(y2 - y1);
     let sx = (x1 < x2) ? 1 : -1; let sy = (y1 < y2) ? 1 : -1;
     let err = dx - dy;
-    
     while (true) {
         if (x1 === x2 && y1 === y2) return true;
         if (gameMap[y1] && gameMap[y1][x1] === TILE.WALL) return false;
@@ -314,17 +313,84 @@ function toggleInventory() {
     }
 }
 
-function checkLevelUp() {
-    if (playerState.xp >= playerState.maxXp) {
-        playerState.xp -= playerState.maxXp;
-        playerState.charLevel++;
-        playerState.unspentPoints += 3;
-        recalculateSecondaryStats();
-        
-        // Fully restore player on level up
+// --- TOWN LOGIC SYSTEM ---
+function toggleTown() {
+    const modal = document.getElementById('town-modal');
+    if (gameState === "PLAYING") {
+        gameState = "TOWN";
+        // Town Benefit: Instantly heal and rejuvenate completely
         playerState.hp = playerState.maxHp;
         playerState.mp = playerState.maxMp;
-        
+        renderTownInterface();
+        modal.style.display = 'block';
+        document.getElementById('log').innerText = "🏡 Resting in the safety of town.";
+    } else if (gameState === "TOWN") {
+        gameState = "PLAYING";
+        modal.style.display = 'none';
+    }
+    updateUI();
+}
+
+function renderTownInterface() {
+    const shopList = document.getElementById('town-shop-list');
+    const sellList = document.getElementById('town-sell-list');
+    shopList.innerHTML = ''; sellList.innerHTML = '';
+
+    // Render Items Available for Purchase
+    Object.keys(ITEM_DB).forEach(name => {
+        let item = ITEM_DB[name];
+        shopList.innerHTML += `
+            <div class="inv-row">
+                <div class="inv-info"><strong>${name}</strong><span>${item.desc}</span></div>
+                <div class="inv-actions">
+                    <button class="btn-use" onclick="townBuy('${name}')">${item.value}g</button>
+                </div>
+            </div>`;
+    });
+
+    // Render Items Available for Sale from Inventory
+    if (playerState.inventory.length === 0) {
+        sellList.innerHTML = '<div style="color: #6b7280; text-align: center; padding: 20px;">Your backpack is empty.</div>';
+    } else {
+        playerState.inventory.forEach((name, idx) => {
+            let item = ITEM_DB[name];
+            let sellPrice = Math.floor(item.value / 2);
+            sellList.innerHTML += `
+                <div class="inv-row">
+                    <div class="inv-info"><strong>${name}</strong><span>Worth: ${sellPrice} Gold</span></div>
+                    <div class="inv-actions">
+                        <button class="btn-drop" onclick="townSell(${idx})">+${sellPrice}g</button>
+                    </div>
+                </div>`;
+        });
+    }
+}
+
+function townBuy(itemName) {
+    let item = ITEM_DB[itemName];
+    if (playerState.gold < item.value) { alert("Not enough gold!"); return; }
+    if (playerState.inventory.length >= playerState.stats.str) { alert("Your bag is completely full!"); return; }
+    
+    playerState.gold -= item.value;
+    playerState.inventory.push(itemName);
+    renderTownInterface();
+    updateUI();
+}
+
+function townSell(idx) {
+    let itemName = playerState.inventory[idx];
+    let sellPrice = Math.floor(ITEM_DB[itemName].value / 2);
+    
+    playerState.gold += sellPrice;
+    playerState.inventory.splice(idx, 1);
+    renderTownInterface();
+    updateUI();
+}
+
+function checkLevelUp() {
+    if (playerState.xp >= playerState.maxXp) {
+        playerState.xp -= playerState.maxXp; playerState.charLevel++; playerState.unspentPoints += 3;
+        recalculateSecondaryStats(); playerState.hp = playerState.maxHp; playerState.mp = playerState.maxMp;
         gameState = "LEVEL_UP";
         document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
         document.getElementById('lvl-modal').style.display = 'block';
@@ -334,15 +400,11 @@ function checkLevelUp() {
 
 function allocateStat(statKey) {
     if (playerState.unspentPoints > 0) {
-        playerState.stats[statKey]++;
-        playerState.unspentPoints--;
+        playerState.stats[statKey]++; playerState.unspentPoints--;
         document.getElementById('ui-lvl-points').innerText = playerState.unspentPoints;
-        recalculateSecondaryStats();
-        updateUI();
-        
+        recalculateSecondaryStats(); updateUI();
         if (playerState.unspentPoints <= 0) {
-            document.getElementById('lvl-modal').style.display = 'none';
-            gameState = "PLAYING";
+            document.getElementById('lvl-modal').style.display = 'none'; gameState = "PLAYING";
             document.getElementById('log').innerText = "💪 You feel your powers surge!";
         }
     }
@@ -404,22 +466,17 @@ function finishMenuAction() { toggleInventory(); processTurn(); }
 function spawnText(x, y, text, color) { floatTexts.push({ x: x, y: y, text: text, color: color, life: 40, offset: 0 }); }
 function isWalkable(x, y) {
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return false;
-    let t = gameMap[y][x];
-    if (t === TILE.WALL || t === TILE.CHEST_CLOSED) return false;
+    let t = gameMap[y][x]; if (t === TILE.WALL || t === TILE.CHEST_CLOSED) return false;
     if (playerPos.x === x && playerPos.y === y || enemies.some(e => e.x === x && e.y === y)) return false;
     return true;
 }
 
 // --- 5. ENEMY & COMBAT TURN RESOLUTION ---
 function processTurn() {
-    // Process Killed Enemies & Distribute XP/Ground Items
     enemies = enemies.filter(en => {
         if (en.hp <= 0) { 
-            playerState.xp += en.xpValue;
-            spawnText(en.x, en.y, `+${en.xpValue} XP`, '#a855f7');
+            playerState.xp += en.xpValue; spawnText(en.x, en.y, `+${en.xpValue} XP`, '#a855f7');
             document.getElementById('log').innerText = `💀 Killed ${en.name}!`; 
-            
-            // Generate Random Loot Drop onto map coordinates
             let roll = Math.random();
             if (roll < 0.4) {
                 groundItems.push({ x: en.x, y: en.y, name: "Gold", amount: Math.floor(Math.random() * 10) + 5, isGold: true });
@@ -438,15 +495,10 @@ function processTurn() {
     let playerDef = Math.floor(playerState.stats.con / 5) + getEquipBonus('def');
 
     enemies.forEach(en => {
-        let dx = playerPos.x - en.x; let dy = playerPos.y - en.y;
-        let dist = Math.abs(dx) + Math.abs(dy);
-
-        if (dist === 1) { // Melee Range Attack
-            let dmg = Math.max(0, en.atk - playerDef);
-            playerState.hp -= dmg;
-            spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
+        let dx = playerPos.x - en.x; let dy = playerPos.y - en.y; let dist = Math.abs(dx) + Math.abs(dy);
+        if (dist === 1) { 
+            let dmg = Math.max(0, en.atk - playerDef); playerState.hp -= dmg; spawnText(playerPos.x, playerPos.y, `-${dmg}`, '#ef4444');
         } else if (dist < 7) { 
-            // Raycast check: Does the enemy have a clean Line of Sight?
             if (hasLineOfSight(en.x, en.y, playerPos.x, playerPos.y)) {
                 let nx = en.x + Math.sign(dx); let ny = en.y + Math.sign(dy);
                 if (Math.abs(dx) > Math.abs(dy)) {
@@ -458,11 +510,7 @@ function processTurn() {
         }
     });
 
-    if (playerState.hp <= 0) {
-        playerState.hp = 0; document.getElementById('log').innerText = `💀 GAME OVER. YOU DIED.`;
-    }
-
-    // Passives
+    if (playerState.hp <= 0) { playerState.hp = 0; document.getElementById('log').innerText = `💀 GAME OVER. YOU DIED.`; }
     if (playerState.hp > 0 && Math.random() < (playerState.stats.wis * 0.015)) {
         if (playerState.hp < playerState.maxHp) playerState.hp++;
         if (playerState.mp < playerState.maxMp) playerState.mp++;
@@ -473,28 +521,25 @@ function processTurn() {
 // --- 6. KEYBOARD CONTROLS ---
 window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'h', 'H', 'f', 'F', 'i', 'I', 'g', 'G'].includes(e.key)) e.preventDefault();
-    if (playerState.hp <= 0 || gameState === "LEVEL_UP") return; 
+    if (playerState.hp <= 0 || gameState === "LEVEL_UP" || gameState === "TOWN") return; 
 
     if (e.key === 'i' || e.key === 'I') { toggleInventory(); return; }
     if (gameState === "INVENTORY") return;
 
     let tookAction = false;
 
-    // Grab Item from Floor
     if (e.key === 'g' || e.key === 'G') {
         let idx = groundItems.findIndex(i => i.x === playerPos.x && i.y === playerPos.y);
         if (idx !== -1) {
             let item = groundItems[idx];
             if (item.isGold) {
-                playerState.gold += item.amount;
-                document.getElementById('log').innerText = `💰 Picked up ${item.amount} Gold!`;
+                playerState.gold += item.amount; document.getElementById('log').innerText = `💰 Picked up ${item.amount} Gold!`;
                 groundItems.splice(idx, 1); tookAction = true;
             } else {
                 if (playerState.inventory.length >= playerState.stats.str) {
                     document.getElementById('log').innerText = `🎒 Overburdened! Inventory full.`;
                 } else {
-                    playerState.inventory.push(item.name);
-                    document.getElementById('log').innerText = `🎒 Picked up ${item.name}.`;
+                    playerState.inventory.push(item.name); document.getElementById('log').innerText = `🎒 Picked up ${item.name}.`;
                     groundItems.splice(idx, 1); tookAction = true;
                 }
             }
@@ -509,18 +554,21 @@ window.addEventListener('keydown', (e) => {
     }
     else if (e.key === 'f' || e.key === 'F') {
         if (playerState.mp >= 3) {
-            playerState.mp -= 3; let mdmg = 2 + Math.floor(playerState.stats.int / 3); let hit = 0;
+            playerState.mp -= 3; let mdmg = 2 + Math.floor(playerState.stats.int / 3);
             enemies.forEach(en => {
-                if (Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y) === 1) { en.hp -= mdmg; spawnText(en.x, en.y, `-${mdmg}`, '#60a5fa'); hit++; }
+                if (Math.abs(en.x - playerPos.x) + Math.abs(en.y - playerPos.y) === 1) { en.hp -= mdmg; spawnText(en.x, en.y, `-${mdmg}`, '#60a5fa'); }
             });
             tookAction = true;
         }
     }
     else if (e.key === 'Enter') {
-        if (gameMap[playerPos.y][playerPos.x] === TILE.STAIRS_DOWN) {
+        let currentTile = gameMap[playerPos.y][playerPos.x];
+        if (currentTile === TILE.STAIRS_DOWN) {
             playerState.dungeonFloor++; generateMap(); 
             document.getElementById('log').innerText = `Descending deep into floor ${playerState.dungeonFloor}...`;
             tookAction = true;
+        } else if (currentTile === TILE.STAIRS_UP) {
+            toggleTown(); // Shift state cleanly into Town Screen
         }
     }
     else {
@@ -561,7 +609,7 @@ window.addEventListener('keydown', (e) => {
     if (tookAction && playerState.hp > 0) processTurn();
 });
 
-// --- 7. PROCEDURAL MAP GENERATION ---
+// --- 7. PROCEDURAL MAP GENERATION (10 ROOMS GUARANTEED) ---
 function generateMap() {
     gameMap = []; enemies = []; groundItems = [];
     for (let y = 0; y < MAP_HEIGHT; y++) {
@@ -569,32 +617,41 @@ function generateMap() {
         gameMap.push(row);
     }
 
-    let rooms = [];
-    for(let i=0; i<4; i++) {
-        let w = 4 + Math.floor(Math.random() * 4); let h = 4 + Math.floor(Math.random() * 4);
-        let x = 1 + Math.floor(Math.random() * (MAP_WIDTH - w - 2)); let y = 1 + Math.floor(Math.random() * (MAP_HEIGHT - h - 2));
-        let room = {x, y, w, h, cx: Math.floor(x+w/2), cy: Math.floor(y+h/2)}; rooms.push(room);
+    let rooms = []; let attempts = 0;
+    while (rooms.length < 10 && attempts < 150) {
+        attempts++; let w = 4 + Math.floor(Math.random() * 5); let h = 4 + Math.floor(Math.random() * 5);
+        let x = 1 + Math.floor(Math.random() * (MAP_WIDTH - w - 1)); let y = 1 + Math.floor(Math.random() * (MAP_HEIGHT - h - 1));
         
-        for(let ry = y; ry < y+h; ry++) { for(let rx = x; rx < x+w; rx++) gameMap[ry][rx] = TILE.FLOOR; }
-        if (i > 0) {
-            let prev = rooms[i-1];
-            for(let px = Math.min(room.cx, prev.cx); px <= Math.max(room.cx, prev.cx); px++) gameMap[room.cy][px] = TILE.FLOOR;
-            for(let py = Math.min(room.cy, prev.cy); py <= Math.max(room.cy, prev.cy); py++) gameMap[py][prev.cx] = TILE.FLOOR;
+        let overlap = false;
+        for (let r of rooms) { if (x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y) { overlap = true; break; } }
+        
+        if (!overlap) {
+            let room = { x, y, w, h, cx: Math.floor(x + w / 2), cy: Math.floor(y + h / 2) }; rooms.push(room);
+            for (let ry = y; ry < y + h; ry++) { for (let rx = x; rx < x + w; rx++) gameMap[ry][rx] = TILE.FLOOR; }
+            if (rooms.length > 1) {
+                let prev = rooms[rooms.length - 2];
+                for (let px = Math.min(room.cx, prev.cx); px <= Math.max(room.cx, prev.cx); px++) gameMap[room.cy][px] = TILE.FLOOR;
+                for (let py = Math.min(room.cy, prev.cy); py <= Math.max(room.cy, prev.cy); py++) gameMap[py][prev.cx] = TILE.FLOOR;
+            }
         }
     }
 
+    if (rooms.length < 2) { generateMap(); return; }
+
     playerPos = { x: rooms[0].cx, y: rooms[0].cy };
     gameMap[playerPos.y][playerPos.x] = TILE.STAIRS_UP;
-    gameMap[rooms[3].cy][rooms[3].cx] = TILE.STAIRS_DOWN;
+    
+    let lastRoom = rooms[rooms.length - 1];
+    gameMap[lastRoom.cy][lastRoom.cx] = TILE.STAIRS_DOWN;
 
-    for(let i=1; i<rooms.length; i++) {
+    for (let i = 1; i < rooms.length; i++) {
         let r = rooms[i];
         if (Math.random() > 0.4) gameMap[r.y + 1][r.x + 1] = TILE.CHEST_CLOSED;
         if (Math.random() > 0.6) gameMap[r.y + 2][r.cx] = TILE.TRAP;
         if (Math.random() > 0.2) {
             let typeStr = Math.random() > 0.5 ? 'GOBLIN' : 'BAT';
-            let ex = r.x + Math.floor(Math.random() * (r.w-1)); let ey = r.y + Math.floor(Math.random() * (r.h-1));
-            if (gameMap[ey][ex] === TILE.FLOOR) {
+            let ex = r.x + Math.floor(Math.random() * (r.w - 1)); let ey = r.y + Math.floor(Math.random() * (r.h - 1));
+            if (gameMap[ey][ex] === TILE.FLOOR && (ex !== lastRoom.cx || ey !== lastRoom.cy)) {
                 enemies.push({
                     x: ex, y: ey, type: typeStr, name: typeStr === 'GOBLIN' ? 'Goblin' : 'Bat',
                     hp: typeStr === 'GOBLIN' ? 10 + playerState.dungeonFloor * 3 : 5 + playerState.dungeonFloor * 2,
@@ -616,7 +673,6 @@ function drawSprite(key, gridX, gridY) {
 function gameLoop() {
     gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 
-    // Render Environment Tiles
     for (let y = 0; y < MAP_HEIGHT; y++) {
         for (let x = 0; x < MAP_WIDTH; x++) {
             let t = gameMap[y][x];
@@ -630,10 +686,8 @@ function gameLoop() {
         }
     }
 
-    // Render Ground Loot
     groundItems.forEach(item => { drawSprite('LOOT_BAG', item.x, item.y); });
 
-    // Render Enemies
     enemies.forEach(en => {
         drawSprite(en.type, en.x, en.y);
         gCtx.fillStyle = 'black'; gCtx.fillRect(en.x * GAME_TILE + 2, en.y * GAME_TILE - 4, 28, 4);
@@ -642,7 +696,6 @@ function gameLoop() {
 
     if (playerState.hp > 0) drawSprite('HERO', playerPos.x, playerPos.y); 
 
-    // Animate Combat Damage Overlays
     for (let i = floatTexts.length - 1; i >= 0; i--) {
         let ft = floatTexts[i];
         gCtx.fillStyle = 'rgba(0,0,0,0.8)'; gCtx.font = "bold 16px Courier New";
@@ -651,37 +704,6 @@ function gameLoop() {
         ft.offset += 0.8; ft.life--; if (ft.life <= 0) floatTexts.splice(i, 1);
     }
     requestAnimationFrame(gameLoop);
-}
-
-// --- 9. ALIGNMENT STUDIO ---
-function setTarget(key, btn) {
-    currentMappingTarget = key; if (activeBtn) activeBtn.classList.remove('active');
-    btn.classList.add('active'); activeBtn = btn;
-}
-sCanvas.addEventListener('click', (e) => {
-    if (!currentMappingTarget) return;
-    const rect = sCanvas.getBoundingClientRect();
-    SPRITE_MAP[currentMappingTarget] = { 
-        col: Math.floor(((e.clientX - rect.left) / 2) / SHEET_GRID), 
-        row: Math.floor(((e.clientY - rect.top) / 2) / SHEET_GRID) 
-    };
-    renderStudioGrid(); 
-});
-function renderStudioGrid() {
-    sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height); sCtx.imageSmoothingEnabled = false; sCtx.drawImage(spriteSheet, 0, 0, 128 * 2, 128 * 2); 
-    for (let r = 0; r < 4; r++) { 
-        for (let c = 0; c < 4; c++) {
-            sCtx.strokeStyle = "rgba(255, 255, 255, 0.2)"; sCtx.strokeRect(c * 64, r * 64, 64, 64);
-            for (let key in SPRITE_MAP) {
-                let spr = SPRITE_MAP[key];
-                if (spr && spr.col === c && spr.row === r) {
-                    sCtx.strokeStyle = "#3b82f6"; sCtx.lineWidth = 2; sCtx.strokeRect(c * 64, r * 64, 64, 64); sCtx.lineWidth = 1;
-                    sCtx.fillStyle = "rgba(59, 130, 246, 0.8)"; sCtx.fillRect(c * 64, r * 64, 24, 12);
-                    sCtx.fillStyle = "#ffffff"; sCtx.font = "10px Arial"; sCtx.fillText(key.substring(0, 3), c * 64 + 2, r * 64 + 10);
-                }
-            }
-        }
-    }
 }
 </script>
 </body>
